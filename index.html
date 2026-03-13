@@ -1059,7 +1059,7 @@ main {
 
 /* Card image */
 .card-img { width:100%; height:160px; object-fit:cover; border-radius:var(--radius-sm); display:block; }
-.card-img-placeholder { width:100%; height:120px; border-radius:var(--radius-sm); background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:2rem; color:var(--text-muted); border:1px dashed var(--border); }
+.card-img-placeholder { width:100%; height:60px; border-radius:var(--radius-sm); background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:.8rem; color:var(--text-muted); border:1px dashed var(--border); }
 
 /* Archive filters */
 .archive-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
@@ -1326,6 +1326,14 @@ main {
       </div>
       <div class="channel-card stub">
         <div class="channel-top">
+          <div class="channel-name">Amazon DE</div>
+          <div class="channel-badge cb-stub">Заглушка</div>
+        </div>
+        <div class="channel-desc">Amazon Seller Central — ожидает настройки</div>
+        <button class="channel-btn" disabled>Настроить</button>
+      </div>
+      <div class="channel-card stub">
+        <div class="channel-top">
           <div class="channel-name">TikTok</div>
           <div class="channel-badge cb-stub">Заглушка</div>
         </div>
@@ -1401,11 +1409,35 @@ main {
       <div class="product-card" style="cursor:default">
         <div class="card-name" style="font-size:.88rem">Фильтры автозапуска</div>
         <div style="margin:6px 0">
-          <label style="font-size:.75rem;color:var(--text-muted)">Минимальный score для WF-3</label>
-          <input type="number" id="set-min-score" min="1" max="10" value="7"
+          <label style="font-size:.75rem;color:var(--text-muted)">Макс. трендов для WF-2 за раз</label>
+          <input type="number" id="set-min-score" min="1" max="20" value="10"
+            style="width:70px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.88rem;margin-top:4px">
+        </div>
+        <div style="margin:6px 0">
+          <label style="font-size:.75rem;color:var(--text-muted)">Минимальный score для автопромоута</label>
+          <input type="number" id="set-promote-score" min="1" max="10" value="7"
             style="width:70px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.88rem;margin-top:4px">
         </div>
         <button class="card-btn primary" style="margin-top:8px" onclick="saveSettings()">Сохранить</button>
+      </div>
+
+      <!-- Publish Top N -->
+      <div class="product-card" style="cursor:default">
+        <div class="card-name" style="font-size:.88rem">Выгрузить Топ кандидатов</div>
+        <div style="margin:6px 0">
+          <label style="font-size:.75rem;color:var(--text-muted)">Количество товаров</label>
+          <input type="number" id="set-publish-count" min="1" max="10" value="5"
+            style="width:70px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.88rem;margin-top:4px">
+        </div>
+        <div style="margin:6px 0">
+          <label style="font-size:.75rem;color:var(--text-muted)">Каналы</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+            <label style="font-size:.8rem;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pub-shopify" checked> Shopify</label>
+            <label style="font-size:.8rem;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pub-allegro"> Allegro</label>
+            <label style="font-size:.8rem;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;gap:4px"><input type="checkbox" id="pub-amazon"> Amazon DE</label>
+          </div>
+        </div>
+        <button class="card-btn primary" style="margin-top:8px" onclick="publishTopN()">Выгрузить</button>
       </div>
 
     </div>
@@ -2047,12 +2079,9 @@ function trendBadge(d) {
 }
 function renderCard(t, btnLabel, btn1Label) { btn1Label = btn1Label || 'AI анализ';
   const [sc, fc] = scoreClass(t.score).split(' ');
-  const phaseIcons = {early:'🌱', peak:'🔥', late:'📉'};
-  const phaseIcon = phaseIcons[t.phase] || '📊';
   const esc = t.name.replace(/'/g, "\\'");
   return `
-  <div class="product-card" onclick="openCard('${esc}')">
-    <div class="card-img-placeholder">${phaseIcon}</div>
+  <div class="product-card" onclick="openCard('${esc}')">`;
     <div class="card-top">
       <div>
         <div class="card-name">${t.name}</div>
@@ -2280,7 +2309,7 @@ function openDetail(candidateId) {
     renderDetailDots();
   } else {
     img.style.display = 'none';
-    gallery.innerHTML = '<div class="card-img-placeholder" style="height:260px">📦</div>';
+    gallery.innerHTML = '<div class="card-img-placeholder" style="height:260px">нет фото</div>';
   }
 
   // Prices
@@ -2429,11 +2458,28 @@ function filterArchive() {
     // Trend card
     const [sc] = scoreClass(c.score).split(' ');
     return `<div class="product-card" onclick="searchThis('${c.name.replace(/'/g,'')}')" style="cursor:pointer">
-      <div class="card-img-placeholder">📊</div>
       <div class="card-top"><div><div class="card-name">${c.name}</div><div class="card-source">Тренд · Score ${c.score}</div></div><div class="score-badge ${sc}">${c.score}</div></div>
       <div class="card-meta"><span class="card-price">${c.price_pln || '—'}</span><span class="card-trend trend-stable">Маржа ${c.margin}%</span></div>
     </div>`;
   }).join('');
+}
+
+// ═══════════════════════════════════════════
+// PUBLISH TOP N
+// ═══════════════════════════════════════════
+function publishTopN() {
+  const count = parseInt(document.getElementById('set-publish-count').value) || 5;
+  const channels = [];
+  if (document.getElementById('pub-shopify').checked) channels.push('shopify');
+  if (document.getElementById('pub-allegro').checked) channels.push('allegro');
+  if (document.getElementById('pub-amazon').checked) channels.push('amazon');
+  if (channels.length === 0) { showToast('Выберите хотя бы один канал', '⚠'); return; }
+  const candidates = (window.CANDIDATES || []).slice(0, count);
+  if (candidates.length === 0) { showToast('Нет кандидатов для выгрузки', '⚠'); return; }
+  showToast(`Выгрузка Топ-${candidates.length} в ${channels.join(', ')}...`, '🚀');
+  // WF-4 Publisher ещё не создан — пока логируем
+  console.log('Publish Top N:', {count, channels, candidates: candidates.map(c => c.name)});
+  showToast(`WF-4 Publisher ещё не создан. Выбрано: ${candidates.length} товаров → ${channels.join(', ')}`, '⚠');
 }
 
 // ═══════════════════════════════════════════
@@ -2560,8 +2606,8 @@ function renderProductCard(c) {
   const img = c.image_drive || c.image_url || (c.image_drive_id ? 'https://lh3.googleusercontent.com/d/' + c.image_drive_id : '');
   const esc = c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
   const imgHtml = img
-    ? `<img class="card-img" src="${img}" alt="${esc}" onerror="this.outerHTML='<div class=card-img-placeholder>📦</div>'">`
-    : '<div class="card-img-placeholder">📦</div>';
+    ? `<img class="card-img" src="${img}" alt="${esc}" onerror="this.outerHTML='<div class=card-img-placeholder>нет фото</div>'">`
+    : '<div class="card-img-placeholder">нет фото</div>';
   const statusBadge = c.content_status === 'completed' ? '<span class="card-trend trend-up">Контент готов</span>'
     : c.content_status === 'processing' ? '<span class="card-trend trend-stable">В работе</span>'
     : '<span class="card-trend trend-down">Нет контента</span>';
