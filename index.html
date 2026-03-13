@@ -246,76 +246,6 @@ body::after {
   transition: background var(--transition);
 }
 
-/* ═══════════════════════════════════════════
-   PASSWORD SCREEN
-═══════════════════════════════════════════ */
-#auth-screen {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  background: var(--bg-page);
-}
-.auth-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: 2.5rem 2rem;
-  width: min(380px, 90vw);
-  text-align: center;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-.auth-logo {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-bottom: .5rem;
-  letter-spacing: -.02em;
-}
-.auth-logo span { color: var(--accent); }
-.auth-sub {
-  font-size: .8rem;
-  color: var(--text-muted);
-  margin-bottom: 1.75rem;
-}
-.auth-input {
-  width: 100%;
-  background: var(--bg-input);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: .75rem 1rem;
-  font-size: .9rem;
-  font-family: var(--font-mono);
-  color: var(--text-primary);
-  outline: none;
-  text-align: center;
-  letter-spacing: .1em;
-  transition: border-color var(--transition);
-  margin-bottom: 1rem;
-}
-.auth-input:focus { border-color: var(--accent); }
-.auth-btn {
-  width: 100%;
-  background: var(--btn-primary-bg);
-  border: 1px solid var(--btn-primary-bd);
-  border-radius: var(--radius-md);
-  padding: .75rem;
-  font-size: .9rem;
-  font-family: var(--font-main);
-  font-weight: 600;
-  color: var(--btn-primary-cl);
-  cursor: pointer;
-  transition: all var(--transition);
-}
-.auth-btn:hover { opacity: .85; transform: translateY(-1px); }
-.auth-error {
-  font-size: .78rem;
-  color: var(--accent-danger);
-  margin-top: .75rem;
-  min-height: 1.2em;
-}
 
 /* ═══════════════════════════════════════════
    HEADER
@@ -1082,16 +1012,6 @@ main {
 <!-- Ambient glow bottom-right -->
 <div class="glow-br"></div>
 
-<!-- ═══ PASSWORD SCREEN ═══ -->
-<div id="auth-screen">
-  <div class="auth-card">
-    <div class="auth-logo">Trend<em>Drop</em> AI</div>
-    <div class="auth-sub">Введите пароль для доступа</div>
-    <input type="password" class="auth-input" id="pw-input" placeholder="••••••••" autocomplete="current-password">
-    <button class="auth-btn" onclick="checkAuth()">Войти</button>
-    <div class="auth-error" id="auth-err"></div>
-  </div>
-</div>
 
 <!-- ═══ THEME DRAWER ═══ -->
 <div class="theme-drawer" id="theme-drawer">
@@ -1627,10 +1547,7 @@ const CONFIG = {
   webhookText:     'https://gringoportal.app.n8n.cloud/webhook/wf3d-text',
   webhookSpecs:    'https://gringoportal.app.n8n.cloud/webhook/wf3e-specs',
   sheetsId:        '171vvuBiPgOz1_T9nJ2_HrL5rUHZ3PV1dMQpvV6Sxgrc',
-  sheetsApiKey:    'AIzaSyAB3y4ieuwCZzDooU5247VxBH0r3D8lfzw',
-  // Password hash — SHA-256 of "trenddrop2026"
-  // To change: run in console: crypto.subtle.digest('SHA-256',new TextEncoder().encode('yourpass')).then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-  pwHash: '702b2bf17af1a685ba154647eca692eb601744f8ad27d581cf55013b257dccc0'
+  sheetsApiKey:    'AIzaSyAB3y4ieuwCZzDooU5247VxBH0r3D8lfzw'
 };
 
 
@@ -1835,33 +1752,9 @@ function triggerAllContent(candidateId, keyword, rowIndex) {
 }
 
 // ═══════════════════════════════════════════
-// AUTH
+// INIT — сразу запускаем дашборд
 // ═══════════════════════════════════════════
-async function checkAuth() {
-  const val = document.getElementById('pw-input').value;
-  if (!val) return;
-  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(val));
-  const hash = [...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,'0')).join('');
-  if (hash === CONFIG.pwHash) {
-    sessionStorage.setItem('td_auth','1');
-    document.getElementById('auth-screen').style.display = 'none';
-    initDashboard();
-  } else {
-    document.getElementById('auth-err').textContent = 'Неверный пароль';
-    document.getElementById('pw-input').style.borderColor = 'var(--accent-danger)';
-    setTimeout(()=>{
-      document.getElementById('auth-err').textContent='';
-      document.getElementById('pw-input').style.borderColor='';
-    }, 2500);
-  }
-}
-document.getElementById('pw-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') checkAuth();
-});
-if (sessionStorage.getItem('td_auth')==='1') {
-  document.getElementById('auth-screen').style.display='none';
-  initDashboard();
-}
+initDashboard();
 
 // ═══════════════════════════════════════════
 // THEME

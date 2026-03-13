@@ -1,4 +1,4 @@
-const CACHE = 'trenddrop-v3';
+const CACHE = 'trenddrop-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icons/icon.svg'];
 
 self.addEventListener('install', e => {
