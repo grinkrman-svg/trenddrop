@@ -1751,10 +1751,6 @@ function triggerAllContent(candidateId, keyword, rowIndex) {
   });
 }
 
-// ═══════════════════════════════════════════
-// INIT — сразу запускаем дашборд
-// ═══════════════════════════════════════════
-initDashboard();
 
 // ═══════════════════════════════════════════
 // THEME
@@ -2542,11 +2538,12 @@ function renderProductCards() {
   }
 }
 
-// Apply saved lang on load
+// Apply saved lang on load + init dashboard
 document.addEventListener('DOMContentLoaded', () => {
   const savedLang = localStorage.getItem('td_lang') || 'ru';
   const btn = document.querySelector(`.lang-btn[onclick*="'${savedLang}'"]`);
   if (btn) { document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+  initDashboard();
 });
 
 </script>
