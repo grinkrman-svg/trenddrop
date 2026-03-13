@@ -1974,7 +1974,7 @@ function renderCard(t, btnLabel, btn1Label) { btn1Label = btn1Label || 'AI ан�
   const [sc, fc] = scoreClass(t.score).split(' ');
   const esc = t.name.replace(/'/g, "\\'");
   return `
-  <div class="product-card" onclick="openCard('${esc}')">`;
+  <div class="product-card" onclick="openCard('${esc}')">
     <div class="card-top">
       <div>
         <div class="card-name">${t.name}</div>
