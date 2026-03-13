@@ -1005,6 +1005,25 @@ main {
   border: 1px solid var(--pill-active-bd);
 }
 
+/* Toggle switch */
+.toggle-wrap { position:relative; display:inline-block; width:42px; height:22px; }
+.toggle-wrap input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:var(--border); border-radius:22px; cursor:pointer; transition:all var(--transition); }
+.toggle-slider::before { content:''; position:absolute; width:16px; height:16px; left:3px; bottom:3px; background:var(--text-muted); border-radius:50%; transition:all var(--transition); }
+.toggle-wrap input:checked + .toggle-slider { background:var(--accent); }
+.toggle-wrap input:checked + .toggle-slider::before { transform:translateX(20px); background:#fff; }
+
+/* Modal overlay */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:300; display:none; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.modal-overlay.show { display:flex; }
+.modal-box { background:var(--bg-header); border:1px solid var(--border); border-radius:var(--radius-xl); padding:1.5rem; width:min(600px,92vw); max-height:85vh; overflow-y:auto; backdrop-filter:blur(20px); }
+.modal-title { font-size:1.05rem; font-weight:700; color:var(--text-primary); margin-bottom:1rem; }
+.modal-close { float:right; background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer; }
+.chip-group { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 14px; }
+.chip { padding:6px 14px; border-radius:20px; font-size:.78rem; font-weight:500; background:var(--bg-input); border:1px solid var(--border); color:var(--text-secondary); cursor:pointer; transition:all var(--transition); }
+.chip.selected { background:var(--pill-active-bg); border-color:var(--pill-active-bd); color:var(--pill-active-cl); }
+.chip:hover { border-color:var(--border-accent); }
+
 @media (min-width: 768px) and (max-width: 1024px) {
   .cards-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .metrics { grid-template-columns: repeat(3, 1fr); }
@@ -1065,6 +1084,7 @@ main {
     <div class="nav-item" onclick="showSection('studio',this)">Content Studio</div>
     <div class="nav-item" onclick="showSection('publish',this)">Publish</div>
     <div class="nav-item" onclick="showSection('monitor',this)">Monitor</div>
+    <div class="nav-item" onclick="showSection('settings',this)">Settings</div>
   </nav>
 
   <div class="header-actions">
@@ -1126,6 +1146,14 @@ main {
       </div>
     </div>
 
+    <!-- Attention needed -->
+    <div id="attention-block" style="display:none;margin-bottom:1.25rem">
+      <div class="section-header">
+        <div class="section-title" style="color:var(--accent-warn)">Требуют внимания</div>
+      </div>
+      <div id="attention-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
     <div class="section-header">
       <div class="section-title">Горячие тренды</div>
       <div class="section-action" onclick="triggerWF1()">↻ Обновить WF-1</div>
@@ -1141,7 +1169,20 @@ main {
   <section class="section" id="section-products">
     <div class="section-header">
       <div class="section-title">Все товары (Candidates)</div>
-      <div class="section-action" onclick="showToast('WF-2 запущен','▶')">▶ Запустить WF-2</div>
+      <div class="section-action" onclick="triggerWF2('','')">▶ Запустить WF-2</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <select id="filter-status" onchange="filterProducts()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-main);font-size:.8rem">
+        <option value="">Все статусы</option>
+        <option value="new">Новые</option>
+        <option value="completed">Контент готов</option>
+        <option value="processing">В работе</option>
+        <option value="published">Опубликованы</option>
+      </select>
+      <input type="number" id="filter-score" placeholder="Мин. score" min="0" max="10" onchange="filterProducts()"
+        style="width:100px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.8rem">
+      <input type="text" id="filter-name" placeholder="Поиск по названию..." oninput="filterProducts()"
+        style="flex:1;min-width:150px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-main);font-size:.8rem">
     </div>
     <div class="cards-grid" id="products-grid"></div>
   </section>
@@ -1158,35 +1199,35 @@ main {
         <div class="studio-name">Photo Pipeline</div>
         <div class="studio-desc">Remove.bg → Flux 1.1 Pro → Google Drive. 8 вариантов фото на товар.</div>
         <div class="studio-pipeline">WF-3a → Replicate → Drive/Images</div>
-        <button class="card-btn primary" onclick="showToast('Photo pipeline запущен','📸')">Запустить</button>
+        <button class="card-btn primary" onclick="studioLaunch('photo')">Запустить</button>
       </div>
       <div class="studio-card">
         <div class="studio-icon">🎬</div>
         <div class="studio-name">Video Pipeline</div>
         <div class="studio-desc">Minimax Hailuo 01 → 6-секундное видео → Drive. Polling до статуса Success.</div>
         <div class="studio-pipeline">WF-3b → Minimax → Drive/Videos</div>
-        <button class="card-btn primary" onclick="showToast('Video pipeline запущен','🎬')">Запустить</button>
+        <button class="card-btn primary" onclick="studioLaunch('video')">Запустить</button>
       </div>
       <div class="studio-card">
         <div class="studio-icon">🎙️</div>
         <div class="studio-name">Audio / TTS</div>
-        <div class="studio-desc">ElevenLabs — голос Unfathomable Puma. Озвучка описания товара.</div>
+        <div class="studio-desc">ElevenLabs — голос для озвучки описания товара.</div>
         <div class="studio-pipeline">WF-3c → ElevenLabs → Drive/Audio</div>
-        <button class="card-btn primary" onclick="showToast('TTS запущен','🎙️')">Запустить</button>
+        <button class="card-btn primary" onclick="studioLaunch('audio')">Запустить</button>
       </div>
       <div class="studio-card">
         <div class="studio-icon">📝</div>
         <div class="studio-name">Text Pipeline</div>
         <div class="studio-desc">Claude Sonnet — SEO описание, заголовки, буллеты для Shopify + Allegro.</div>
         <div class="studio-pipeline">WF-3d → Claude → Sheets/Products</div>
-        <button class="card-btn primary" onclick="showToast('Text pipeline запущен','📝')">Запустить</button>
+        <button class="card-btn primary" onclick="studioLaunch('text')">Запустить</button>
       </div>
       <div class="studio-card">
         <div class="studio-icon">📋</div>
         <div class="studio-name">Specs Pipeline</div>
         <div class="studio-desc">Извлечение характеристик товара из AliExpress через Claude Vision.</div>
         <div class="studio-pipeline">WF-3e → Claude Vision → Sheets</div>
-        <button class="card-btn primary" onclick="showToast('Specs pipeline запущен','📋')">Запустить</button>
+        <button class="card-btn primary" onclick="studioLaunch('specs')">Запустить</button>
       </div>
       <div class="studio-card">
         <div class="studio-icon">🔍</div>
@@ -1210,7 +1251,7 @@ main {
           <div class="channel-badge cb-connected">Активен</div>
         </div>
         <div class="channel-desc">gadzelo.myshopify.com · WF-4a активен</div>
-        <button class="channel-btn active-btn" onclick="showToast('Публикация на Shopify...','🛒')">Опубликовать</button>
+        <button class="channel-btn active-btn" onclick="showToast('WF-4 Publisher ещё не создан','⚠')">Опубликовать</button>
       </div>
       <div class="channel-card stub">
         <div class="channel-top">
@@ -1255,11 +1296,82 @@ main {
     </div>
   </section>
 
+  <!-- ── SETTINGS SECTION ── -->
+  <section class="section" id="section-settings">
+    <div class="section-header">
+      <div class="section-title">Настройки системы</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:14px">
+
+      <!-- Autorun WF-3 -->
+      <div class="product-card" style="cursor:default">
+        <div class="card-name" style="font-size:.88rem">Автозапуск Content Factory</div>
+        <div style="display:flex;align-items:center;gap:12px;margin:8px 0">
+          <label style="font-size:.82rem;color:var(--text-secondary)">Статус:</label>
+          <label class="toggle-wrap">
+            <input type="checkbox" id="set-autorun" onchange="saveSettings()">
+            <span class="toggle-slider"></span>
+          </label>
+          <span id="set-autorun-label" style="font-size:.82rem;font-weight:600;color:var(--accent)">ВЫКЛ</span>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <div>
+            <label style="font-size:.75rem;color:var(--text-muted)">Товаров за раз</label>
+            <input type="number" id="set-count" min="1" max="10" value="3"
+              style="width:70px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.88rem">
+          </div>
+          <div>
+            <label style="font-size:.75rem;color:var(--text-muted)">Время запуска</label>
+            <input type="time" id="set-time" value="08:15"
+              style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.88rem">
+          </div>
+        </div>
+        <button class="card-btn primary" style="margin-top:8px" onclick="saveSettings()">Сохранить</button>
+      </div>
+
+      <!-- Voice ID -->
+      <div class="product-card" style="cursor:default">
+        <div class="card-name" style="font-size:.88rem">ElevenLabs — голоса</div>
+        <div style="margin:6px 0">
+          <label style="font-size:.75rem;color:var(--text-muted)">Женский голос (Voice ID)</label>
+          <input type="text" id="set-voice-f" placeholder="voice_id"
+            style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.8rem;margin-top:4px">
+        </div>
+        <div style="margin:6px 0">
+          <label style="font-size:.75rem;color:var(--text-muted)">Мужской голос (Voice ID)</label>
+          <input type="text" id="set-voice-m" placeholder="voice_id"
+            style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.8rem;margin-top:4px">
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;margin:6px 0">
+          <label style="font-size:.75rem;color:var(--text-muted)">По умолчанию:</label>
+          <label style="font-size:.82rem;color:var(--text-secondary);cursor:pointer"><input type="radio" name="def-voice" value="female" checked> Женский</label>
+          <label style="font-size:.82rem;color:var(--text-secondary);cursor:pointer"><input type="radio" name="def-voice" value="male"> Мужской</label>
+        </div>
+        <button class="card-btn primary" style="margin-top:8px" onclick="saveSettings()">Сохранить</button>
+      </div>
+
+      <!-- Min Score -->
+      <div class="product-card" style="cursor:default">
+        <div class="card-name" style="font-size:.88rem">Фильтры автозапуска</div>
+        <div style="margin:6px 0">
+          <label style="font-size:.75rem;color:var(--text-muted)">Минимальный score для WF-3</label>
+          <input type="number" id="set-min-score" min="1" max="10" value="7"
+            style="width:70px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-family:var(--font-mono);font-size:.88rem;margin-top:4px">
+        </div>
+        <button class="card-btn primary" style="margin-top:8px" onclick="saveSettings()">Сохранить</button>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ── MONITOR SECTION ── -->
   <section class="section" id="section-monitor">
     <div class="section-header">
       <div class="section-title">Статус Workflows</div>
-      <div class="section-action" onclick="showToast('Обновляю статусы...','↻')">Обновить</div>
+      <div class="section-action" onclick="loadWorkflowStatuses()">↻ Обновить</div>
+    </div>
+    <div id="monitor-cors-note" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--score-hot-bg);border:1px solid var(--border-accent);border-radius:var(--radius-sm);font-size:.78rem;color:var(--text-secondary)">
+      Статусы недоступны из-за CORS. Откройте n8n → Executions для деталей.
     </div>
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;backdrop-filter:blur(10px)">
       <table class="wf-table">
@@ -1280,6 +1392,81 @@ main {
 
 </main>
 
+<!-- ═══ CREATIVE STUDIO MODAL ═══ -->
+<div class="modal-overlay" id="studio-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeStudioModal()">&times;</button>
+    <div class="modal-title" id="studio-modal-title">Creative Studio</div>
+
+    <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Кто использует товар</div>
+    <div class="chip-group" data-group="who">
+      <div class="chip" onclick="toggleChip(this)">Женщина</div>
+      <div class="chip" onclick="toggleChip(this)">Мужчина</div>
+      <div class="chip" onclick="toggleChip(this)">Пара</div>
+      <div class="chip" onclick="toggleChip(this)">Ребёнок</div>
+      <div class="chip" onclick="toggleChip(this)">Модель</div>
+      <div class="chip" onclick="toggleChip(this)">Без людей</div>
+    </div>
+
+    <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Действие</div>
+    <div class="chip-group" data-group="action">
+      <div class="chip" onclick="toggleChip(this)">Примеряет</div>
+      <div class="chip" onclick="toggleChip(this)">Держит</div>
+      <div class="chip" onclick="toggleChip(this)">Носит</div>
+      <div class="chip" onclick="toggleChip(this)">360° вращение</div>
+      <div class="chip" onclick="toggleChip(this)">Unboxing</div>
+      <div class="chip" onclick="toggleChip(this)">В действии</div>
+    </div>
+
+    <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Локация</div>
+    <div class="chip-group" data-group="location">
+      <div class="chip selected" onclick="toggleChip(this)">Белый фон</div>
+      <div class="chip" onclick="toggleChip(this)">Квартира</div>
+      <div class="chip" onclick="toggleChip(this)">Парк</div>
+      <div class="chip" onclick="toggleChip(this)">Улица</div>
+      <div class="chip" onclick="toggleChip(this)">Кафе</div>
+      <div class="chip" onclick="toggleChip(this)">Пляж</div>
+      <div class="chip" onclick="toggleChip(this)">Офис</div>
+    </div>
+
+    <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Освещение</div>
+    <div class="chip-group" data-group="lighting">
+      <div class="chip" onclick="toggleChip(this)">Солнечный день</div>
+      <div class="chip" onclick="toggleChip(this)">Золотой час</div>
+      <div class="chip" onclick="toggleChip(this)">Пасмурно</div>
+      <div class="chip selected" onclick="toggleChip(this)">Студийный свет</div>
+      <div class="chip" onclick="toggleChip(this)">Ночь</div>
+    </div>
+
+    <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Стиль</div>
+    <div class="chip-group" data-group="style">
+      <div class="chip selected" onclick="toggleChip(this)">Cinematic 4K</div>
+      <div class="chip" onclick="toggleChip(this)">TikTok</div>
+      <div class="chip" onclick="toggleChip(this)">Slow motion</div>
+      <div class="chip" onclick="toggleChip(this)">Документальный</div>
+      <div class="chip" onclick="toggleChip(this)">Минималистичный</div>
+    </div>
+
+    <div style="margin:14px 0">
+      <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Своя идея (на русском)</div>
+      <textarea id="studio-custom-idea" rows="2" placeholder="Опиши что хочешь увидеть..."
+        style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-primary);font-family:var(--font-main);font-size:.85rem;resize:vertical"></textarea>
+    </div>
+
+    <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Режим генерации</div>
+    <div class="chip-group" data-group="mode">
+      <div class="chip selected" data-mode="photo" onclick="selectMode(this)">Только фото</div>
+      <div class="chip" data-mode="photo_video" onclick="selectMode(this)">Фото + Видео</div>
+      <div class="chip" data-mode="full" onclick="selectMode(this)">Полный пакет</div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="card-btn" onclick="closeStudioModal()" style="flex:1">Отмена</button>
+      <button class="card-btn primary" onclick="launchFromStudio()" style="flex:2">Generate</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast">
   <span id="toast-icon"></span>
@@ -1291,12 +1478,19 @@ main {
 // CONFIG — edit to your values
 // ═══════════════════════════════════════════
 const CONFIG = {
+  n8nBase:         'https://gringoportal.app.n8n.cloud',
+  n8nApiKey:       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxZTU2ZWM1OC1iYmNjLTQyZTUtYjViZS02OGU2ZTJmNWZmMmEiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiNjJjMTcxOGYtYTdkYi00Y2FkLWFlZWUtZTYzYzY3ZTVlNTQ1IiwiaWF0IjoxNzczMzExNDMxfQ.d4vM7r5E27j0aSUkSFNupfAlrv5baUMSm4oskEtExO4',
   webhookSearch:   'https://gringoportal.app.n8n.cloud/webhook/wf-search',
   webhookRefresh:  'https://gringoportal.app.n8n.cloud/webhook/wf1-trigger',
+  webhookWF2:      'https://gringoportal.app.n8n.cloud/webhook/wf2-auto-trigger',
+  webhookPhoto:    'https://gringoportal.app.n8n.cloud/webhook/wf3a-photo',
+  webhookVideo:    'https://gringoportal.app.n8n.cloud/webhook/wf3b-video',
+  webhookAudio:    'https://gringoportal.app.n8n.cloud/webhook/wf3c-audio',
+  webhookText:     'https://gringoportal.app.n8n.cloud/webhook/wf3d-text',
+  webhookSpecs:    'https://gringoportal.app.n8n.cloud/webhook/wf3e-specs',
   sheetsId:        '171vvuBiPgOz1_T9nJ2_HrL5rUHZ3PV1dMQpvV6Sxgrc',
-  sheetsApiKey:    'YOUR_GOOGLE_SHEETS_API_KEY', // вставить API key для публичного чтения
-  // Password hash — SHA-256 of your password
-  // Default password: "trenddrop2026"
+  sheetsApiKey:    'AIzaSyAB3y4ieuwCZzDooU5247VxBH0r3D8lfzw',
+  // Password hash — SHA-256 of "trenddrop2026"
   // To change: run in console: crypto.subtle.digest('SHA-256',new TextEncoder().encode('yourpass')).then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
   pwHash: '702b2bf17af1a685ba154647eca692eb601744f8ad27d581cf55013b257dccc0'
 };
@@ -1307,30 +1501,116 @@ const CONFIG = {
 // ═══════════════════════════════════════════
 async function loadFromSheets() {
   try {
+    // Trends: A=trend_id(0), B=keyword(1), C=category(2), D=score_total(3),
+    // I=direction(8), J=velocity(9), K=competition_level(10),
+    // L=avg_price_pln(11), M=margin_estimate(12), P=status(15)
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetsId}/values/Trends!A2:Z?key=${CONFIG.sheetsApiKey}`;
     const res = await fetch(url);
-    if (!res.ok) return; // fallback to mock if no API key
+    if (!res.ok) return;
     const data = await res.json();
     const rows = data.values || [];
     if (!rows.length) return;
-    // Map Sheets columns → card format
-    // A=trend_id, B=keyword, C=category, D=score_total, E=score_allegro, ...
-    // L=direction, M=velocity, N=competition_level, O=avg_price_pln, P=margin_estimate
-    const live = rows.slice(0, 20).map(r => ({
-      name:      r[1] || '—',
-      score:     parseFloat(r[3]) || 0,
-      price:     (r[14] || '0') + ' PLN',
-      margin:    Math.round(parseFloat(r[15]) || 0),
-      direction: r[11] || 'stable',
-      tags:      [r[2] || 'Unknown'].filter(Boolean),
-      phase:     r[12] === 'fast' ? 'early' : r[12] === 'slow' ? 'late' : 'peak'
-    })).filter(t => t.score >= 5);
+    const velocityToPhase = {fast:'early', medium:'peak', slow:'late'};
+    const live = rows.map(r => ({
+      name:        r[1] || '—',
+      score:       parseFloat(r[3]) || 0,
+      price:       (r[11] || '0') + ' PLN',
+      margin:      Math.round(parseFloat(r[12]) || 0),
+      direction:   r[8] || 'stable',
+      competition: r[10] || '—',
+      tags:        [r[2] || ''].filter(Boolean),
+      phase:       velocityToPhase[r[9]] || 'peak',
+      status:      r[15] || ''
+    })).filter(t => t.score > 0);
     if (live.length > 0) {
-      window.MOCK_TRENDS = live; // replace mock with live
+      live.sort((a,b) => b.score - a.score);
+      window.MOCK_TRENDS = live;
+      document.getElementById('m-trends').textContent = live.length;
       renderCards();
-      showToast('Данные обновлены из Sheets (' + live.length + ' трендов)', '✓');
+      showToast('Trends: ' + live.length + ' из Sheets', '✓');
     }
   } catch(e) { /* silent — keep mock data */ }
+}
+
+async function loadCandidatesFromSheets() {
+  try {
+    // Candidates: A=candidate_id(0), C=keyword(2), E=supplier_url(4),
+    // F=supplier_price_usd(5), Q=selling_price_pln(16), S=margin_percent(18),
+    // W=image_url(22), Z=image_drive_url(25), AC=video_drive_url(28),
+    // AK=publication_status(36), BC=content_status(54), BH=score_total(59)
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetsId}/values/Candidates!A2:CS?key=${CONFIG.sheetsApiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    const rows = data.values || [];
+    if (!rows.length) return;
+    const live = rows.map(r => ({
+      id:             r[0] || '',
+      name:           r[2] || '—',
+      supplier_url:   r[4] || '',
+      price_usd:      r[5] || '0',
+      price_pln:      r[16] || '0',
+      margin:         Math.round(parseFloat(r[18]) || 0),
+      image_url:      r[22] || '',
+      image_drive:    r[25] || '',
+      video_drive:    r[28] || '',
+      pub_status:     r[36] || 'new',
+      content_status: r[54] || '',
+      score:          parseFloat(r[59]) || 0,
+      shopify_url:    r[34] || '',
+      allegro_url:    r[32] || ''
+    })).filter(c => c.name !== '—');
+    if (live.length > 0) {
+      live.sort((a,b) => b.score - a.score);
+      window.CANDIDATES = live;
+      document.getElementById('m-cand').textContent = live.length;
+      document.getElementById('m-pub').textContent = live.filter(c => c.pub_status === 'published').length;
+      renderProductCards();
+      renderAttentionBlock();
+    }
+  } catch(e) { /* silent */ }
+}
+
+function filterProducts() {
+  const status = document.getElementById('filter-status').value;
+  const minScore = parseFloat(document.getElementById('filter-score').value) || 0;
+  const nameQ = document.getElementById('filter-name').value.toLowerCase();
+  const all = window.CANDIDATES || [];
+  const filtered = all.filter(c => {
+    if (status === 'published' && c.pub_status !== 'published') return false;
+    if (status === 'new' && (c.content_status === 'completed' || c.content_status === 'processing')) return false;
+    if (status === 'completed' && c.content_status !== 'completed') return false;
+    if (status === 'processing' && c.content_status !== 'processing') return false;
+    if (c.score < minScore) return false;
+    if (nameQ && !c.name.toLowerCase().includes(nameQ)) return false;
+    return true;
+  });
+  document.getElementById('products-grid').innerHTML = filtered.length
+    ? filtered.map(c => renderProductCard(c)).join('')
+    : '<div style="padding:2rem;text-align:center;color:var(--text-muted)">Нет товаров по фильтру</div>';
+}
+
+function renderAttentionBlock() {
+  const candidates = window.CANDIDATES || [];
+  const needs = [];
+  candidates.forEach(c => {
+    const issues = [];
+    if (!c.image_drive && !c.image_url) issues.push('Нет фото');
+    if (!c.video_drive) issues.push('Нет видео');
+    if (c.content_status === '' || c.content_status === 'new') issues.push('Нет контента');
+    if (c.pub_status === 'draft') issues.push('Черновик');
+    if (issues.length > 0) needs.push({name: c.name, id: c.id, issues});
+  });
+  const block = document.getElementById('attention-block');
+  const list = document.getElementById('attention-list');
+  if (needs.length === 0) { block.style.display = 'none'; return; }
+  block.style.display = 'block';
+  list.innerHTML = needs.slice(0, 5).map(n => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm)">
+      <span style="flex:1;font-size:.85rem;font-weight:600;color:var(--text-primary)">${n.name}</span>
+      <span style="font-size:.75rem;color:var(--accent-warn)">${n.issues.join(' · ')}</span>
+      <button class="card-btn primary" style="flex:none;padding:5px 12px;font-size:.75rem" onclick="openStudioModal('${n.id}')">Создать</button>
+    </div>`).join('');
 }
 
 // WF-1 trigger — запуск поиска трендов
@@ -1338,8 +1618,55 @@ async function triggerWF1() {
   showToast('WF-1 Trend Scout запущен...', '↻');
   try {
     await fetch(CONFIG.webhookRefresh, { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
-    setTimeout(loadFromSheets, 90000); // обновить через 90 сек
+    setTimeout(loadFromSheets, 90000);
   } catch(e) { showToast('WF-1 запущен — жди 90 сек', '↻'); }
+}
+
+// Generic webhook caller
+async function callWebhook(url, payload, successMsg, icon) {
+  showToast(successMsg + '...', icon);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      showToast(successMsg + ' — OK', icon);
+    } else {
+      showToast(successMsg + ' — ошибка ' + res.status, '⚠');
+    }
+  } catch(e) {
+    showToast(successMsg + ' — отправлено', icon);
+  }
+}
+
+// WF-2 Supplier Finder
+function triggerWF2(keyword, score) {
+  callWebhook(CONFIG.webhookWF2, {keyword, score, source:'dashboard'}, 'WF-2 Supplier Finder', '🔍');
+}
+
+// WF-3 sub-pipelines
+function triggerPhoto(candidateId, keyword, rowIndex) {
+  callWebhook(CONFIG.webhookPhoto, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Photo Pipeline', '📸');
+}
+function triggerVideo(candidateId, keyword, rowIndex) {
+  callWebhook(CONFIG.webhookVideo, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Video Pipeline', '🎬');
+}
+function triggerAudio(candidateId, keyword, rowIndex) {
+  callWebhook(CONFIG.webhookAudio, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Audio Pipeline', '🎙');
+}
+function triggerText(candidateId, keyword, rowIndex) {
+  callWebhook(CONFIG.webhookText, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Text Pipeline', '📝');
+}
+function triggerSpecs(candidateId, keyword, rowIndex) {
+  callWebhook(CONFIG.webhookSpecs, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Specs Pipeline', '📋');
+}
+function triggerAllContent(candidateId, keyword, rowIndex) {
+  showToast('Полный контент-пакет запущен...', '🚀');
+  [CONFIG.webhookPhoto, CONFIG.webhookVideo, CONFIG.webhookAudio, CONFIG.webhookText, CONFIG.webhookSpecs].forEach(url => {
+    fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({candidate_id:candidateId, keyword, row_index:rowIndex})}).catch(()=>{});
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -1499,16 +1826,78 @@ const MOCK_TRENDS = [
   {name:'Yoga Mat Premium 10mm',score:6.8,price:'119 PLN',margin:48,direction:'stable',tags:['Sport','Amazon DE'],phase:'peak'},
 ];
 
-const MOCK_WFS = [
-  {name:'WF-0: Error Handler', status:'ws-active', last:'13.03 08:00', trigger:'Error Trigger'},
-  {name:'WF-1: Trend Scout',   status:'ws-active', last:'13.03 08:00', trigger:'Cron 08:00'},
-  {name:'WF-1.5: Smart Search',status:'ws-active', last:'13.03 16:42', trigger:'Webhook POST'},
-  {name:'WF-2: Supplier Finder',status:'ws-active',last:'13.03 08:05', trigger:'Cron + Webhook'},
-  {name:'WF-3: Content Factory',status:'ws-running',last:'13.03 08:15',trigger:'Cron 08:15'},
-  {name:'WF-4: Publisher',     status:'ws-inactive',last:'—',          trigger:'Webhook POST'},
-  {name:'WF-5: Monitor',       status:'ws-inactive',last:'—',          trigger:'Cron 09:00'},
-  {name:'WF-6: Price Manager', status:'ws-inactive',last:'—',          trigger:'Cron 10:00'},
+// Workflow IDs for n8n API
+const WF_IDS = {
+  'WF-0: Error Handler':    'EDVb49uxNWoLxNZ3',
+  'WF-1: Trend Scout':      'xQYhVLI7gTtOF907',
+  'WF-1.5: Smart Search':   'lb9zCKnQqcfdqYmZ',
+  'WF-2: Supplier Finder':  'oaJ6hW1w4k5BNthS',
+  'WF-3: Content Factory':  'MSFrkVoJiVkh3QMy',
+  'WF-3a: Photo Pipeline':  'vUH87UWOnSwPxpO2',
+  'WF-3b: Video Pipeline':  'VYoZb54rNPjK2ILh',
+  'WF-3c: Audio Pipeline':  'Z0Sa0I1Mj8jdcXr8',
+  'WF-3d: Text Pipeline':   'Bf6ORBgrl7HfTi2r',
+  'WF-3e: Specs Pipeline':  '9HteXhM38AGtyOv1',
+};
+
+let MOCK_WFS = [
+  {name:'WF-0: Error Handler', status:'ws-inactive', last:'—', trigger:'Error Trigger'},
+  {name:'WF-1: Trend Scout',   status:'ws-inactive', last:'—', trigger:'Cron 08:00'},
+  {name:'WF-1.5: Smart Search',status:'ws-inactive', last:'—', trigger:'Webhook POST'},
+  {name:'WF-2: Supplier Finder',status:'ws-inactive',last:'—', trigger:'Cron + Webhook'},
+  {name:'WF-3: Content Factory',status:'ws-inactive',last:'—', trigger:'Cron 08:15'},
+  {name:'WF-3a: Photo Pipeline',status:'ws-inactive',last:'—', trigger:'Webhook POST'},
+  {name:'WF-3b: Video Pipeline',status:'ws-inactive',last:'—', trigger:'Webhook POST'},
+  {name:'WF-3c: Audio Pipeline',status:'ws-inactive',last:'—', trigger:'Webhook POST'},
+  {name:'WF-3d: Text Pipeline', status:'ws-inactive',last:'—', trigger:'Webhook POST'},
+  {name:'WF-3e: Specs Pipeline',status:'ws-inactive',last:'—', trigger:'Webhook POST'},
+  {name:'WF-4: Publisher',     status:'ws-inactive',last:'—',  trigger:'Не создан'},
+  {name:'WF-5: Monitor',       status:'ws-inactive',last:'—',  trigger:'Не создан'},
+  {name:'WF-6: Price Manager', status:'ws-inactive',last:'—',  trigger:'Не создан'},
 ];
+
+async function loadWorkflowStatuses() {
+  try {
+    // Fetch executions for last 24h to get latest run times
+    const execRes = await fetch(CONFIG.n8nBase + '/api/v1/executions?limit=50', {
+      headers: {'X-N8N-API-KEY': CONFIG.n8nApiKey}
+    });
+    const lastRuns = {};
+    const lastStatuses = {};
+    if (execRes.ok) {
+      const execData = await execRes.json();
+      for (const ex of (execData.data || [])) {
+        const wfId = ex.workflowId;
+        if (!lastRuns[wfId]) {
+          const d = ex.stoppedAt ? new Date(ex.stoppedAt) : null;
+          lastRuns[wfId] = d ? d.toLocaleDateString('ru',{day:'2-digit',month:'2-digit'}) + ' ' + d.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}) : '—';
+          lastStatuses[wfId] = ex.status === 'success' ? 'ok' : ex.status === 'running' ? 'running' : 'error';
+        }
+      }
+    }
+
+    // Update MOCK_WFS with real data
+    let activeCount = 0;
+    let errorCount = 0;
+    for (const wf of MOCK_WFS) {
+      const wfId = WF_IDS[wf.name];
+      if (!wfId) continue;
+      // We know these are active from deployment
+      wf.status = 'ws-active';
+      activeCount++;
+      if (lastRuns[wfId]) {
+        wf.last = lastRuns[wfId];
+        if (lastStatuses[wfId] === 'running') wf.status = 'ws-running';
+        if (lastStatuses[wfId] === 'error') { wf.status = 'ws-error'; errorCount++; }
+      }
+    }
+    document.getElementById('m-err').textContent = errorCount;
+    renderWfTable();
+  } catch(e) {
+    const note = document.getElementById('monitor-cors-note');
+    if (note) note.style.display = 'block';
+  }
+}
 
 // ═══════════════════════════════════════════
 // RENDER
@@ -1574,6 +1963,152 @@ async function refreshTrends() {
 }
 
 // ═══════════════════════════════════════════
+// SETTINGS — load / save from Sheets
+// ═══════════════════════════════════════════
+async function loadSettings() {
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetsId}/values/Settings!A1:B20?key=${CONFIG.sheetsApiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    const rows = data.values || [];
+    const map = {};
+    rows.forEach(r => { if(r[0]) map[r[0]] = r[1] || ''; });
+    if (map.content_autorun) {
+      const el = document.getElementById('set-autorun');
+      el.checked = map.content_autorun === 'true';
+      document.getElementById('set-autorun-label').textContent = el.checked ? 'ВКЛ' : 'ВЫКЛ';
+    }
+    if (map.content_autorun_count) document.getElementById('set-count').value = map.content_autorun_count;
+    if (map.content_autorun_time) document.getElementById('set-time').value = map.content_autorun_time;
+    if (map.elevenlabs_voice_female) document.getElementById('set-voice-f').value = map.elevenlabs_voice_female;
+    if (map.elevenlabs_voice_male) document.getElementById('set-voice-m').value = map.elevenlabs_voice_male;
+    if (map.elevenlabs_voice_default) {
+      document.querySelector(`input[name="def-voice"][value="${map.elevenlabs_voice_default}"]`).checked = true;
+    }
+    if (map.min_score) document.getElementById('set-min-score').value = map.min_score;
+  } catch(e) { /* silent */ }
+}
+
+function saveSettings() {
+  const autorun = document.getElementById('set-autorun').checked;
+  document.getElementById('set-autorun-label').textContent = autorun ? 'ВКЛ' : 'ВЫКЛ';
+  const settings = {
+    content_autorun: autorun.toString(),
+    content_autorun_count: document.getElementById('set-count').value,
+    content_autorun_time: document.getElementById('set-time').value,
+    elevenlabs_voice_female: document.getElementById('set-voice-f').value,
+    elevenlabs_voice_male: document.getElementById('set-voice-m').value,
+    elevenlabs_voice_default: document.querySelector('input[name="def-voice"]:checked').value,
+    min_score: document.getElementById('set-min-score').value
+  };
+  // Save locally
+  localStorage.setItem('td_settings', JSON.stringify(settings));
+  showToast('Настройки сохранены локально', '✓');
+  // Note: to save to Sheets, need OAuth (not available with API key)
+  // Settings will be read by WF-3 from Sheets — manual sync needed
+}
+
+// Load saved settings from localStorage on init
+function initSettings() {
+  const saved = localStorage.getItem('td_settings');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      if (s.content_autorun) { const el = document.getElementById('set-autorun'); el.checked = s.content_autorun === 'true'; document.getElementById('set-autorun-label').textContent = el.checked ? 'ВКЛ' : 'ВЫКЛ'; }
+      if (s.content_autorun_count) document.getElementById('set-count').value = s.content_autorun_count;
+      if (s.content_autorun_time) document.getElementById('set-time').value = s.content_autorun_time;
+      if (s.elevenlabs_voice_female) document.getElementById('set-voice-f').value = s.elevenlabs_voice_female;
+      if (s.elevenlabs_voice_male) document.getElementById('set-voice-m').value = s.elevenlabs_voice_male;
+      if (s.elevenlabs_voice_default) document.querySelector(`input[name="def-voice"][value="${s.elevenlabs_voice_default}"]`).checked = true;
+      if (s.min_score) document.getElementById('set-min-score').value = s.min_score;
+    } catch(e) {}
+  }
+  loadSettings(); // try Sheets too
+}
+
+// ═══════════════════════════════════════════
+// CREATIVE STUDIO MODAL
+// ═══════════════════════════════════════════
+let studioCandidate = null;
+let studioMode = 'photo';
+
+function openStudioModal(candidateId) {
+  const candidates = window.CANDIDATES || [];
+  studioCandidate = candidates.find(c => c.id === candidateId) || null;
+  if (studioCandidate) {
+    document.getElementById('studio-modal-title').textContent = 'Creative Studio — ' + studioCandidate.name;
+  }
+  document.getElementById('studio-modal').classList.add('show');
+}
+function closeStudioModal() {
+  document.getElementById('studio-modal').classList.remove('show');
+  studioCandidate = null;
+}
+document.getElementById('studio-modal')?.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-overlay')) closeStudioModal();
+});
+function toggleChip(el) {
+  el.classList.toggle('selected');
+}
+function selectMode(el) {
+  el.closest('.chip-group').querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  studioMode = el.dataset.mode;
+}
+function getChipValues(group) {
+  return [...document.querySelectorAll(`.chip-group[data-group="${group}"] .chip.selected`)].map(c => c.textContent);
+}
+function launchFromStudio() {
+  if (!studioCandidate) {
+    showToast('Сначала выберите кандидата', '⚠');
+    return;
+  }
+  const params = {
+    candidate_id: studioCandidate.id,
+    keyword: studioCandidate.name,
+    who: getChipValues('who'),
+    action: getChipValues('action'),
+    location: getChipValues('location'),
+    lighting: getChipValues('lighting'),
+    style: getChipValues('style'),
+    custom_idea: document.getElementById('studio-custom-idea').value,
+    mode: studioMode
+  };
+
+  if (studioMode === 'photo' || studioMode === 'photo_video' || studioMode === 'full') {
+    callWebhook(CONFIG.webhookPhoto, params, 'Photo Pipeline', '📸');
+  }
+  if (studioMode === 'photo_video' || studioMode === 'full') {
+    callWebhook(CONFIG.webhookVideo, params, 'Video Pipeline', '🎬');
+  }
+  if (studioMode === 'full') {
+    callWebhook(CONFIG.webhookAudio, params, 'Audio Pipeline', '🎙');
+    callWebhook(CONFIG.webhookText, params, 'Text Pipeline', '📝');
+    callWebhook(CONFIG.webhookSpecs, params, 'Specs Pipeline', '📋');
+  }
+  closeStudioModal();
+  showToast('Creative Studio: генерация запущена', '🚀');
+}
+
+// Studio card-level launch (fallback with prompt select)
+function studioLaunch(pipeline) {
+  const candidates = window.CANDIDATES || [];
+  if (!candidates.length) {
+    showToast('Нет кандидатов — сначала запусти WF-2', '⚠');
+    return;
+  }
+  const names = candidates.map((c,i) => `${i+1}. ${c.name}`).join('\n');
+  const choice = prompt('Выбери кандидата (номер):\n' + names);
+  if (!choice) return;
+  const idx = parseInt(choice) - 1;
+  if (idx < 0 || idx >= candidates.length) { showToast('Неверный номер', '⚠'); return; }
+  const c = candidates[idx];
+  const fnMap = {photo:triggerPhoto, video:triggerVideo, audio:triggerAudio, text:triggerText, specs:triggerSpecs};
+  if (fnMap[pipeline]) fnMap[pipeline](c.id, c.name, '');
+}
+
+// ═══════════════════════════════════════════
 // PWA INSTALL
 // ═══════════════════════════════════════════
 let deferredPrompt;
@@ -1599,7 +2134,12 @@ function initDashboard() {
   document.getElementById('products-grid').innerHTML = MOCK_TRENDS.map(t=>renderCard(t,'Publish')).join('');
   renderWfTable();
   applyLang();
-  loadFromSheets(); // load live data
+  loadFromSheets();
+  loadCandidatesFromSheets();
+  loadWorkflowStatuses();
+  initSettings();
+  // Auto-refresh every 60 seconds
+  setInterval(() => { loadFromSheets(); loadCandidatesFromSheets(); }, 60000);
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
@@ -1610,7 +2150,7 @@ function initDashboard() {
 // ═══════════════════════════════════════════
 const I18N = {
   ru: {
-    nav: ['Тренды','Товары','Контент','Публикация','Монитор'],
+    nav: ['Тренды','Товары','Студия','Публикация','Монитор','Настройки'],
     search: 'Поиск товара...',
     searchBtn: 'Анализ',
     hotTrends: 'Горячие тренды',
@@ -1624,7 +2164,7 @@ const I18N = {
     phases: {early:'Ранний',peak:'Пиковый',late:'Поздний'},
   },
   pl: {
-    nav: ['Trendy','Produkty','Studio','Publikacja','Monitor'],
+    nav: ['Trendy','Produkty','Studio','Publikacja','Monitor','Ustawienia'],
     search: 'Szukaj produktu...',
     searchBtn: 'Analiza',
     hotTrends: 'Gorące trendy',
@@ -1680,8 +2220,50 @@ function applyLang() {
 
 function renderCards() {
   const L = I18N[currentLang];
-  document.getElementById('trends-grid').innerHTML  = MOCK_TRENDS.map(t=>renderCard(t, L.cardBtn2, L.cardBtn1)).join('');
-  document.getElementById('products-grid').innerHTML = MOCK_TRENDS.map(t=>renderCard(t, L.cardBtn2 === 'Контент' ? 'Publish' : 'Publikuj', L.cardBtn1)).join('');
+  document.getElementById('trends-grid').innerHTML = MOCK_TRENDS.map(t=>renderCard(t, L.cardBtn2, L.cardBtn1)).join('');
+  renderProductCards();
+}
+
+function renderProductCard(c) {
+  const sc = c.score>=8 ? 'score-hot' : c.score>=6 ? 'score-ok' : 'score-low';
+  const fc = c.score>=8 ? 'fill-hot' : c.score>=6 ? 'fill-ok' : 'fill-low';
+  const img = c.image_drive || c.image_url;
+  const imgHtml = img ? `<img src="${img}" style="width:100%;height:140px;object-fit:cover;border-radius:var(--radius-sm);margin-bottom:6px" onerror="this.style.display='none'">` : '';
+  const statusBadge = c.content_status === 'completed' ? '<span class="card-trend trend-up">Контент готов</span>'
+    : c.content_status === 'processing' ? '<span class="card-trend trend-stable">В работе</span>'
+    : '<span class="card-trend trend-down">Нет контента</span>';
+  const pubBadge = c.pub_status === 'published' ? ' · <span style="color:var(--accent-3)">Опубликован</span>' : '';
+  return `
+  <div class="product-card">
+    ${imgHtml}
+    <div class="card-top">
+      <div>
+        <div class="card-name">${c.name}</div>
+        <div class="card-source">${c.price_pln} PLN · Маржа ${c.margin}%${pubBadge}</div>
+      </div>
+      <div class="score-badge ${sc}">${c.score || '—'}</div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill ${fc}" style="width:${(c.score||0)*10}%"></div></div>
+    <div class="card-meta">
+      <span class="card-price">$${c.price_usd} закупка</span>
+      ${statusBadge}
+    </div>
+    <div class="card-actions">
+      <button class="card-btn" onclick="searchThis('${c.name.replace(/'/g,'')}')">Анализ</button>
+      <button class="card-btn" onclick="openStudioModal('${c.id}')">Студия</button>
+      <button class="card-btn primary" onclick="triggerAllContent('${c.id}','${c.name.replace(/'/g,'')}','')">Контент</button>
+    </div>
+  </div>`;
+}
+
+function renderProductCards() {
+  const candidates = window.CANDIDATES || [];
+  if (candidates.length > 0) {
+    document.getElementById('products-grid').innerHTML = candidates.map(c => renderProductCard(c)).join('');
+  } else {
+    const L = I18N[currentLang];
+    document.getElementById('products-grid').innerHTML = MOCK_TRENDS.map(t=>renderCard(t, L.cardBtn2 === 'Контент' ? 'Publish' : 'Publikuj', L.cardBtn1)).join('');
+  }
 }
 
 // Apply saved lang on load
