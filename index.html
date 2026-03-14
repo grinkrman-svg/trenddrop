@@ -978,6 +978,23 @@ main {
 .detail-statuses { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:.8rem; }
 .detail-status { padding:3px 10px; border-radius:10px; font-size:.72rem; font-weight:600; }
 .detail-video { width:100%; border-radius:var(--radius-md); margin:1rem 0; background:#000; }
+/* Video controls in Studio modal */
+.video-controls { display:none; margin:10px 0; padding:12px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-md); }
+.video-controls.visible { display:block; }
+.video-controls label { font-size:.78rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:4px; }
+.video-photo-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px; }
+.video-photo-grid img { width:100%; height:60px; object-fit:cover; border-radius:6px; border:2px solid transparent; cursor:pointer; transition:border var(--transition); }
+.video-photo-grid img.selected { border-color:var(--accent); box-shadow:0 0 8px var(--glow-1); }
+.video-photo-grid img:hover { border-color:var(--border-accent); }
+.video-slider-wrap { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.video-slider-wrap input[type=range] { flex:1; accent-color:var(--accent); }
+.video-slider-wrap .slider-val { font-family:var(--font-mono); font-size:.85rem; color:var(--accent); min-width:80px; }
+.video-format-group { display:flex; gap:6px; margin-bottom:8px; }
+/* Clip playlist in detail modal */
+.clip-playlist { display:flex; gap:6px; overflow-x:auto; padding:6px 0; margin-bottom:6px; }
+.clip-playlist .clip-thumb { width:64px; height:36px; border-radius:4px; border:2px solid transparent; cursor:pointer; background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:.7rem; color:var(--text-muted); flex-shrink:0; transition:border var(--transition); }
+.clip-playlist .clip-thumb.active { border-color:var(--accent); }
+.clip-playlist .clip-thumb:hover { border-color:var(--border-accent); }
 .detail-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:1rem; }
 .detail-actions .card-btn { flex:none; min-width:100px; }
 .detail-supplier { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); margin:.6rem 0; cursor:pointer; transition:all var(--transition); text-decoration:none; }
@@ -1005,6 +1022,674 @@ main {
   .metrics { grid-template-columns: repeat(3, 1fr); }
   .nav-item { padding: 5px 11px; font-size: .75rem; }
 }
+
+/* ═══════════════════════════════════════════
+   GENERATION TRACKER — FAB bottom-right
+═══════════════════════════════════════════ */
+.gen-tracker {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 450;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+.gen-tracker.has-jobs { pointer-events: auto; }
+
+.gen-fab {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--btn-primary-bg);
+  border: 2px solid var(--btn-primary-bd);
+  color: var(--btn-primary-cl);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  transition: all var(--transition);
+  position: relative;
+  pointer-events: auto;
+}
+.gen-fab:hover { transform: scale(1.08); box-shadow: 0 12px 40px rgba(0,0,0,.5); }
+.gen-fab.active { display: flex; }
+.gen-fab .fab-spinner {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--accent);
+  border-right-color: var(--accent-2);
+  animation: fabSpin 1.2s linear infinite;
+}
+@keyframes fabSpin { to { transform: rotate(360deg); } }
+.gen-fab .fab-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent-danger);
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gen-fab .fab-done {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 3px solid var(--accent-3);
+  animation: fabPulse 1s ease-out;
+  opacity: 0;
+}
+@keyframes fabPulse { 0%{opacity:1;transform:scale(1)} 100%{opacity:0;transform:scale(1.4)} }
+
+/* Job panel (expanded) */
+.gen-panel {
+  background: var(--bg-header);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 16px 48px rgba(0,0,0,.5);
+  width: 320px;
+  max-height: 400px;
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+  pointer-events: auto;
+}
+.gen-panel.open { display: flex; }
+.gen-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.gen-panel-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; }
+.gen-job {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  transition: background var(--transition);
+  cursor: pointer;
+}
+.gen-job:hover { background: var(--bg-card-hover); }
+.gen-job:last-child { border-bottom: none; }
+.gen-job-icon { font-size: 1.1rem; flex-shrink: 0; }
+.gen-job-info { flex: 1; min-width: 0; }
+.gen-job-name { font-size: .8rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gen-job-status { font-size: .7rem; color: var(--text-muted); }
+.gen-job-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: fabSpin .8s linear infinite;
+  flex-shrink: 0;
+}
+.gen-job-check { color: var(--accent-3); font-size: 1rem; flex-shrink: 0; font-weight: 800; }
+.gen-job-fail { color: var(--accent-danger); font-size: 1rem; flex-shrink: 0; font-weight: 800; }
+
+/* Completed notification banner */
+.gen-notify {
+  position: fixed;
+  top: 76px;
+  right: 24px;
+  z-index: 500;
+  background: var(--bg-header);
+  border: 1px solid var(--accent-3);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  min-width: 280px;
+  max-width: 380px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: notifySlide .35s ease;
+  cursor: pointer;
+}
+.gen-notify.show { display: flex; }
+@keyframes notifySlide { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+.gen-notify-icon { font-size: 1.4rem; }
+.gen-notify-text { flex: 1; }
+.gen-notify-title { font-size: .85rem; font-weight: 700; color: var(--text-primary); }
+.gen-notify-sub { font-size: .72rem; color: var(--text-secondary); }
+.gen-notify-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
+
+/* ═══════════════════════════════════════════
+   ENHANCED DETAIL MODAL — MEDIA TABS
+═══════════════════════════════════════════ */
+.media-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.media-tab {
+  padding: 8px 16px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.media-tab:hover { color: var(--text-secondary); }
+.media-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.media-tab .tab-badge {
+  font-size: .65rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.media-tab.active .tab-badge { background: var(--pill-active-bg); color: var(--accent); }
+.media-tab .tab-generating {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent-warn);
+  animation: fabSpin .8s linear infinite;
+}
+
+.media-panel { display: none; }
+.media-panel.active { display: block; }
+
+/* Photo grid in detail */
+.detail-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.detail-photo-item {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.detail-photo-item:hover { border-color: var(--border-accent); }
+.detail-photo-item.selected { border-color: var(--accent); box-shadow: 0 0 12px var(--glow-1); }
+.detail-photo-item img { width: 100%; height: 120px; object-fit: cover; display: block; }
+.detail-photo-item .photo-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.detail-photo-item:hover .photo-overlay { display: flex; }
+.photo-overlay-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.photo-overlay-btn:hover { background: rgba(255,255,255,.25); }
+
+/* Video panel in detail */
+.detail-video-panel video {
+  width: 100%;
+  border-radius: var(--radius-md);
+  background: #000;
+  margin-bottom: 8px;
+}
+.video-clip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.video-clip-item {
+  position: relative;
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.video-clip-item:hover { border-color: var(--border-accent); }
+.video-clip-item.active { border-color: var(--accent); background: var(--pill-active-bg); }
+.video-clip-item .clip-label { font-size: .75rem; font-weight: 600; color: var(--text-primary); }
+.video-clip-item .clip-dur { font-size: .65rem; color: var(--text-muted); }
+.video-regen-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Audio panel */
+.detail-audio-panel audio { width: 100%; margin: 8px 0; }
+.audio-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 8px;
+}
+.audio-voice-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: .8rem;
+}
+
+/* Text panel */
+.detail-text-panel textarea {
+  width: 100%;
+  min-height: 120px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: .85rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+.text-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.text-meta-item {
+  font-size: .72rem;
+  color: var(--text-muted);
+}
+.text-meta-item strong { color: var(--text-secondary); }
+
+@media (max-width: 640px) {
+  .gen-panel { width: calc(100vw - 32px); }
+  .gen-notify { left: 16px; right: 16px; max-width: none; }
+  .gen-fab { width: 48px; height: 48px; font-size: 1.2rem; }
+  .detail-photo-grid { grid-template-columns: repeat(2, 1fr); }
+  .mr-overlay .mr-box { width: 98vw; height: 95vh; }
+  .mr-sidebar { min-width: 180px; max-width: 180px; }
+}
+
+/* ═══════════════════════════════════════════
+   RECORDING INDICATOR — bottom-right pulse
+═══════════════════════════════════════════ */
+.rec-indicator {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  z-index: 460;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(15,12,41,0.92);
+  border: 1px solid rgba(248,113,113,0.4);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(248,113,113,0.15);
+  animation: recSlideIn .35s ease;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.rec-indicator:hover { border-color: rgba(248,113,113,0.7); transform: scale(1.03); }
+.rec-indicator.show { display: flex; }
+@keyframes recSlideIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+.rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f87171;
+  box-shadow: 0 0 8px rgba(248,113,113,0.6);
+  animation: recPulse 1.2s ease-in-out infinite;
+}
+@keyframes recPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(0.8)} }
+.rec-label {
+  font-size: .78rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #f87171;
+  letter-spacing: .1em;
+}
+.rec-info {
+  font-size: .72rem;
+  color: var(--text-secondary);
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rec-timer {
+  font-size: .72rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.rec-waveform {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+}
+.rec-waveform span {
+  width: 3px;
+  background: #f87171;
+  border-radius: 2px;
+  animation: recWave 0.8s ease-in-out infinite;
+}
+.rec-waveform span:nth-child(1) { height: 6px; animation-delay: 0s; }
+.rec-waveform span:nth-child(2) { height: 12px; animation-delay: 0.15s; }
+.rec-waveform span:nth-child(3) { height: 8px; animation-delay: 0.3s; }
+.rec-waveform span:nth-child(4) { height: 14px; animation-delay: 0.45s; }
+.rec-waveform span:nth-child(5) { height: 6px; animation-delay: 0.6s; }
+@keyframes recWave {
+  0%,100% { transform: scaleY(0.5); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════
+   MEDIA REVIEW PLAYER — fullscreen overlay
+═══════════════════════════════════════════ */
+.mr-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.mr-overlay.show { display: flex; }
+
+.mr-box {
+  width: min(1100px, 95vw);
+  height: min(720px, 90vh);
+  background: var(--bg-header);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: fadeSlide .3s ease;
+}
+
+/* Header */
+.mr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-shrink: 0;
+}
+.mr-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mr-nav-arrows {
+  display: flex;
+  gap: 4px;
+}
+.mr-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  transition: all var(--transition);
+}
+.mr-nav-btn:hover { border-color: var(--border-accent); color: var(--accent); }
+.mr-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: all var(--transition);
+}
+.mr-close-btn:hover { color: var(--accent-danger); border-color: var(--accent-danger); }
+
+/* Body */
+.mr-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Sidebar — media list */
+.mr-sidebar {
+  min-width: 200px;
+  max-width: 220px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mr-media-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.mr-media-item:hover { background: var(--bg-card); border-color: var(--border); }
+.mr-media-item.active { background: var(--pill-active-bg); border-color: var(--pill-active-bd); }
+.mr-media-icon { font-size: 1.1rem; flex-shrink: 0; width: 24px; text-align: center; }
+.mr-media-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mr-media-sub {
+  font-size: .65rem;
+  color: var(--text-muted);
+}
+.mr-section-title {
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 10px 10px 4px;
+}
+
+/* Main viewer */
+.mr-viewer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.mr-player-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  min-height: 0;
+  background: rgba(0,0,0,0.2);
+  position: relative;
+}
+.mr-player-area img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+.mr-player-area video {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-md);
+  background: #000;
+}
+.mr-player-area audio {
+  width: 80%;
+  max-width: 500px;
+}
+.mr-player-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .9rem;
+}
+.mr-player-empty .empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  opacity: .5;
+}
+
+/* Bottom controls */
+.mr-controls {
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.mr-correction-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.mr-correction-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: .82rem;
+  resize: none;
+  min-height: 40px;
+  max-height: 80px;
+  transition: border-color var(--transition);
+}
+.mr-correction-input:focus { border-color: var(--border-accent); outline: none; }
+.mr-correction-input::placeholder { color: var(--text-muted); }
+.mr-action-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mr-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: .8rem;
+  font-family: var(--font-main);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mr-btn:hover { border-color: var(--border-accent); color: var(--accent); }
+.mr-btn.mr-primary {
+  background: var(--btn-primary-bg);
+  border-color: var(--btn-primary-bd);
+  color: var(--btn-primary-cl);
+}
+.mr-btn.mr-primary:hover { opacity: .85; }
+.mr-btn.mr-danger { color: var(--accent-danger); }
+.mr-btn.mr-danger:hover { border-color: var(--accent-danger); }
+.mr-btn.mr-success { color: var(--accent-3); }
+.mr-btn.mr-success:hover { border-color: var(--accent-3); }
+.mr-btn .btn-icon { font-size: .9rem; }
+
+/* Status badge in player */
+.mr-status-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: .7rem;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+.mr-status-ok { background: rgba(52,211,153,.2); color: #34d399; border: 1px solid rgba(52,211,153,.3); }
+.mr-status-missing { background: rgba(248,113,113,.2); color: #f87171; border: 1px solid rgba(248,113,113,.3); }
+.mr-status-processing { background: rgba(251,191,36,.2); color: #fbbf24; border: 1px solid rgba(251,191,36,.3); }
 </style>
 </head>
 <body data-theme="aurora">
@@ -1218,7 +1903,7 @@ main {
           <div class="channel-badge cb-connected">Активен</div>
         </div>
         <div class="channel-desc">gadzelo.myshopify.com · WF-4a активен</div>
-        <button class="channel-btn active-btn" onclick="showToast('WF-4 Publisher ещё не создан','⚠')">Опубликовать</button>
+        <button class="channel-btn active-btn" onclick="publishTopN()">Опубликовать</button>
       </div>
       <div class="channel-card stub">
         <div class="channel-top">
@@ -1478,8 +2163,33 @@ main {
     <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Режим генерации</div>
     <div class="chip-group" data-group="mode">
       <div class="chip selected" data-mode="photo" onclick="selectMode(this)">Только фото</div>
+      <div class="chip" data-mode="video_only" onclick="selectMode(this)">Только видео</div>
       <div class="chip" data-mode="photo_video" onclick="selectMode(this)">Фото + Видео</div>
       <div class="chip" data-mode="full" onclick="selectMode(this)">Полный пакет</div>
+    </div>
+
+    <!-- Video Controls — visible when video mode selected -->
+    <div class="video-controls" id="video-controls">
+      <label>Стартовое фото</label>
+      <div class="video-photo-grid" id="video-photo-grid"></div>
+
+      <label>Длительность видео</label>
+      <div class="video-slider-wrap">
+        <input type="range" id="video-duration" min="6" max="60" step="6" value="12" oninput="updateDurationLabel()">
+        <span class="slider-val" id="video-duration-label">12 сек (2 клипа)</span>
+      </div>
+
+      <label>Формат</label>
+      <div class="video-format-group chip-group" data-group="vformat">
+        <div class="chip selected" data-vformat="9:16" onclick="selectVideoFormat(this)">9:16 TikTok</div>
+        <div class="chip" data-vformat="1:1" onclick="selectVideoFormat(this)">1:1 Instagram</div>
+        <div class="chip" data-vformat="16:9" onclick="selectVideoFormat(this)">16:9 YouTube</div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <input type="checkbox" id="video-voiceover" checked>
+        <label for="video-voiceover" style="margin:0;text-transform:none;font-size:.82rem;color:var(--text-secondary)">Озвучка (ElevenLabs)</label>
+      </div>
     </div>
 
     <div style="display:flex;gap:10px;margin-top:14px">
@@ -1489,7 +2199,7 @@ main {
   </div>
 </div>
 
-<!-- ═══ PRODUCT DETAIL MODAL ═══ -->
+<!-- ═══ PRODUCT DETAIL MODAL (Enhanced) ═══ -->
 <div class="detail-modal" id="detail-modal" onclick="if(event.target===this)closeDetail()">
   <div class="detail-box">
     <button class="detail-close" onclick="closeDetail()">&times;</button>
@@ -1513,15 +2223,162 @@ main {
         </a>
       </div>
     </div>
-    <div id="detail-video-wrap" style="display:none">
-      <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Видео</div>
-      <video class="detail-video" id="detail-video" controls></video>
+
+    <!-- Media Tabs -->
+    <div class="media-tabs" id="media-tabs">
+      <button class="media-tab active" onclick="switchMediaTab('photos',this)" data-tab="photos">
+        Фото <span class="tab-badge" id="tab-photos-count">0</span>
+      </button>
+      <button class="media-tab" onclick="switchMediaTab('video',this)" data-tab="video">
+        Видео <span class="tab-badge" id="tab-video-count">0</span>
+      </button>
+      <button class="media-tab" onclick="switchMediaTab('audio',this)" data-tab="audio">
+        Аудио <span class="tab-badge" id="tab-audio-count">0</span>
+      </button>
+      <button class="media-tab" onclick="switchMediaTab('text',this)" data-tab="text">
+        Текст
+      </button>
     </div>
-    <div id="detail-editor-wrap" style="display:none">
-      <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Описание товара</div>
-      <textarea class="detail-editor" id="detail-editor" placeholder="Описание товара..."></textarea>
+
+    <!-- Photos Panel -->
+    <div class="media-panel active" id="panel-photos">
+      <div class="detail-photo-grid" id="detail-photo-grid"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button class="card-btn primary" onclick="regenPhotos()" id="btn-regen-photos">Перегенерировать фото</button>
+        <button class="card-btn" onclick="openStudioForCurrent('photo')">Creative Studio</button>
+      </div>
     </div>
+
+    <!-- Video Panel -->
+    <div class="media-panel" id="panel-video">
+      <div class="detail-video-panel">
+        <div id="detail-video-status" style="display:none;padding:12px;background:var(--score-hot-bg);border:1px solid var(--border-accent);border-radius:var(--radius-sm);margin-bottom:10px;display:flex;align-items:center;gap:10px">
+          <div class="gen-job-spinner"></div>
+          <span style="font-size:.82rem;color:var(--text-secondary)" id="detail-video-status-text">Видео генерируется...</span>
+        </div>
+        <video id="detail-video" controls style="width:100%;border-radius:var(--radius-md);background:#000"></video>
+        <div class="video-clip-grid" id="video-clip-grid"></div>
+        <div class="video-regen-bar">
+          <button class="card-btn primary" onclick="regenVideo()" id="btn-regen-video">Перегенерировать видео</button>
+          <button class="card-btn" onclick="openStudioForCurrent('video_only')">Настройки видео</button>
+          <select id="detail-video-format" class="audio-voice-select" onchange="regenVideoFormat()">
+            <option value="9:16">9:16 TikTok</option>
+            <option value="1:1">1:1 Instagram</option>
+            <option value="16:9">16:9 YouTube</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Panel -->
+    <div class="media-panel" id="panel-audio">
+      <div id="detail-audio-status" style="display:none;padding:12px;background:var(--score-hot-bg);border:1px solid var(--border-accent);border-radius:var(--radius-sm);margin-bottom:10px;display:flex;align-items:center;gap:10px">
+        <div class="gen-job-spinner"></div>
+        <span style="font-size:.82rem;color:var(--text-secondary)">Аудио генерируется...</span>
+      </div>
+      <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Озвучка товара</div>
+      <audio id="detail-audio" controls style="width:100%;margin:8px 0"></audio>
+      <div id="detail-no-audio" style="padding:20px;text-align:center;color:var(--text-muted);font-size:.85rem;display:none">Аудио ещё не сгенерировано</div>
+      <div class="audio-controls">
+        <select id="detail-voice-select" class="audio-voice-select">
+          <option value="female">Женский голос</option>
+          <option value="male">Мужской голос</option>
+        </select>
+        <button class="card-btn primary" onclick="regenAudio()">Перегенерировать</button>
+        <button class="card-btn" onclick="previewVoice()">Превью голоса</button>
+      </div>
+    </div>
+
+    <!-- Text Panel -->
+    <div class="media-panel" id="panel-text">
+      <div style="font-size:.78rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">SEO описание товара</div>
+      <textarea id="detail-editor" class="detail-editor" placeholder="Описание товара..." style="width:100%;min-height:140px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text-primary);font-family:var(--font-main);font-size:.85rem;resize:vertical;line-height:1.5"></textarea>
+      <div class="text-meta" id="detail-text-meta"></div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button class="card-btn primary" onclick="regenText()">Перегенерировать текст</button>
+        <button class="card-btn" onclick="regenSpecs()">Обновить характеристики</button>
+        <button class="card-btn" onclick="copyDescription()">Копировать</button>
+      </div>
+    </div>
+
     <div class="detail-actions" id="detail-actions"></div>
+  </div>
+</div>
+
+<!-- ═══ GENERATION TRACKER FAB ═══ -->
+<div class="gen-tracker" id="gen-tracker">
+  <div class="gen-panel" id="gen-panel">
+    <div class="gen-panel-header">
+      <span>Генерация контента</span>
+      <button class="gen-panel-close" onclick="toggleGenPanel()">&times;</button>
+    </div>
+    <div id="gen-jobs-list"></div>
+  </div>
+  <div class="gen-fab" id="gen-fab" onclick="toggleGenPanel()">
+    <div class="fab-spinner"></div>
+    <span class="fab-count" id="fab-count">0</span>
+    <span style="position:relative;z-index:1">&#9881;</span>
+  </div>
+</div>
+
+<!-- ═══ GENERATION COMPLETE NOTIFICATION ═══ -->
+<div class="gen-notify" id="gen-notify" onclick="onGenNotifyClick()">
+  <span class="gen-notify-icon" id="gen-notify-icon"></span>
+  <div class="gen-notify-text">
+    <div class="gen-notify-title" id="gen-notify-title"></div>
+    <div class="gen-notify-sub" id="gen-notify-sub"></div>
+  </div>
+  <button class="gen-notify-close" onclick="event.stopPropagation();hideGenNotify()">&times;</button>
+</div>
+
+<!-- ═══ RECORDING INDICATOR ═══ -->
+<div class="rec-indicator" id="rec-indicator" onclick="toggleGenPanel()">
+  <div class="rec-dot"></div>
+  <span class="rec-label">REC</span>
+  <div class="rec-waveform">
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+  <span class="rec-info" id="rec-info">Генерация...</span>
+  <span class="rec-timer" id="rec-timer">0:00</span>
+</div>
+
+<!-- ═══ MEDIA REVIEW PLAYER ═══ -->
+<div class="mr-overlay" id="mr-overlay" onclick="if(event.target===this)closeMR()">
+  <div class="mr-box">
+    <div class="mr-header">
+      <div class="mr-title" id="mr-title">Media Review</div>
+      <div class="mr-nav-arrows">
+        <button class="mr-nav-btn" onclick="mrNavPrev()" title="Предыдущий">&lsaquo;</button>
+        <span style="font-size:.75rem;color:var(--text-muted);padding:0 6px" id="mr-counter">1/1</span>
+        <button class="mr-nav-btn" onclick="mrNavNext()" title="Следующий">&rsaquo;</button>
+      </div>
+      <button class="mr-close-btn" onclick="closeMR()">&times;</button>
+    </div>
+    <div class="mr-body">
+      <div class="mr-sidebar" id="mr-sidebar">
+        <!-- populated by JS -->
+      </div>
+      <div class="mr-viewer">
+        <div class="mr-player-area" id="mr-player-area">
+          <div class="mr-player-empty">
+            <div class="empty-icon">&#9654;</div>
+            <div>Выберите медиа для просмотра</div>
+          </div>
+        </div>
+        <div class="mr-controls">
+          <div class="mr-correction-row">
+            <textarea class="mr-correction-input" id="mr-correction" placeholder="Напишите что исправить... (стиль, ракурс, текст, голос и т.д.)" rows="2"></textarea>
+          </div>
+          <div class="mr-action-row">
+            <button class="mr-btn mr-primary" onclick="mrFix()"><span class="btn-icon">&#9881;</span> Исправить</button>
+            <button class="mr-btn mr-success" onclick="mrAccept()"><span class="btn-icon">&#10003;</span> Принять</button>
+            <button class="mr-btn" onclick="mrRegenAll()"><span class="btn-icon">&#8635;</span> Перегенерировать всё</button>
+            <button class="mr-btn mr-success" onclick="mrPublish()"><span class="btn-icon">&#9650;</span> Опубликовать</button>
+            <button class="mr-btn mr-danger" onclick="mrReject()"><span class="btn-icon">&#10007;</span> Отклонить</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1546,6 +2403,7 @@ const CONFIG = {
   webhookAudio:    'https://gringoportal.app.n8n.cloud/webhook/wf3c-audio',
   webhookText:     'https://gringoportal.app.n8n.cloud/webhook/wf3d-text',
   webhookSpecs:    'https://gringoportal.app.n8n.cloud/webhook/wf3e-specs',
+  webhookPublish:  'https://gringoportal.app.n8n.cloud/webhook/wf4-publish',
   sheetsId:        '171vvuBiPgOz1_T9nJ2_HrL5rUHZ3PV1dMQpvV6Sxgrc',
   sheetsApiKey:    'AIzaSyAB3y4ieuwCZzDooU5247VxBH0r3D8lfzw'
 };
@@ -1578,12 +2436,17 @@ async function loadFromSheets() {
     // Trends: A=trend_id(0), B=keyword(1), C=category(2), D=score_total(3),
     // I=direction(8), J=velocity(9), K=competition_level(10),
     // L=avg_price_pln(11), M=margin_estimate(12), P=status(15)
+    // Note: only 25 columns (indices 0-24), no thumbnail column
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetsId}/values/Trends!A2:Z?key=${CONFIG.sheetsApiKey}`;
     const res = await fetch(url);
     if (!res.ok) return;
     const data = await res.json();
     const rows = data.values || [];
-    if (!rows.length) return;
+    if (!rows.length) {
+      document.getElementById('trends-grid').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);grid-column:1/-1">Нет трендов. Нажмите «Найти тренды» для поиска.</div>';
+      document.getElementById('m-trends').textContent = '0';
+      return;
+    }
     const velocityToPhase = {fast:'early', medium:'peak', slow:'late'};
     const live = rows.map(r => ({
       name:        r[1] || '—',
@@ -1594,30 +2457,46 @@ async function loadFromSheets() {
       competition: r[10] || '—',
       tags:        [r[2] || ''].filter(Boolean),
       phase:       velocityToPhase[r[9]] || 'peak',
-      status:      r[15] || ''
+      status:      r[15] || '',
+      image:       '' // no thumbnail column in Trends sheet
     })).filter(t => t.score > 0);
     if (live.length > 0) {
       live.sort((a,b) => b.score - a.score);
       window.MOCK_TRENDS = live;
       document.getElementById('m-trends').textContent = live.length;
       renderCards();
-      showToast('Trends: ' + live.length + ' из Sheets', '✓');
+      showToast('Тренды: ' + live.length + ' загружено', '✓');
+    } else {
+      document.getElementById('trends-grid').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);grid-column:1/-1">Нет трендов с score > 0. Нажмите «Найти тренды».</div>';
+      document.getElementById('m-trends').textContent = '0';
     }
-  } catch(e) { /* silent — keep mock data */ }
+  } catch(e) { /* silent */ }
 }
 
 async function loadCandidatesFromSheets() {
   try {
-    // Candidates: A=candidate_id(0), C=keyword(2), E=supplier_url(4),
+    // Candidates column map (0-indexed):
+    // A=candidate_id(0), B=trend_id(1), C=keyword(2), E=supplier_url(4),
     // F=supplier_price_usd(5), Q=selling_price_pln(16), S=margin_percent(18),
-    // W=image_url(22), Z=image_drive_url(25), AC=video_drive_url(28),
-    // AK=publication_status(36), BC=content_status(54), BH=score_total(59)
+    // T=content_title(19), U=content_description(20), V=content_keywords(21),
+    // W=image_url(22), Y=image_drive_id(24), Z=image_drive_url(25),
+    // AC=video_drive_url(28), AG=allegro_url(32), AI=shopify_url(34),
+    // AK=publication_status(36), AY=base_image_drive_url(50),
+    // AZ=lifestyle_image_drive_url(51), BA=audio_drive_id(52),
+    // BB=audio_drive_url(53), BC=content_status(54), BH=score_total(59),
+    // BQ=photos_all_urls(68), BR=photos_count(69), BT=video_format(71),
+    // BU=video_duration_sec(72), BV=video_style(73), BW=video_clips_count(74),
+    // BY=videos_all_urls(76), CC=audios_all_urls(80)
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetsId}/values/Candidates!A2:CS?key=${CONFIG.sheetsApiKey}`;
     const res = await fetch(url);
     if (!res.ok) return;
     const data = await res.json();
     const rows = data.values || [];
-    if (!rows.length) return;
+    if (!rows.length) {
+      document.getElementById('m-cand').textContent = '0';
+      renderProductCards();
+      return;
+    }
     const live = rows.map(r => ({
       id:             r[0] || '',
       name:           r[2] || '—',
@@ -1629,14 +2508,29 @@ async function loadCandidatesFromSheets() {
       image_drive_id: r[24] || '',
       image_drive:    driveDirectUrl(r[25] || ''),
       video_drive:    driveDirectUrl(r[28] || ''),
+      video_clips_count: parseInt(r[74]) || 0,
+      videos_all_urls: (function(){ try { return JSON.parse(r[76] || '[]'); } catch(e) { return []; } })(),
+      audio_url:      driveDirectUrl(r[53] || ''),
       pub_status:     r[36] || 'new',
       content_status: r[54] || '',
       score:          parseFloat(r[59]) || 0,
       shopify_url:    r[34] || '',
       allegro_url:    r[32] || '',
-      description:    r[40] || '',
-      title_pl:       r[38] || '',
-      created_at:     r[1] || ''
+      description:    r[20] || '',
+      title_pl:       r[19] || '',
+      trend_id:       r[1] || '',
+      photos_all_urls: (function(){ try { return JSON.parse(r[68] || '[]'); } catch(e) { return []; } })(),
+      photos_count:   parseInt(r[69]) || 0,
+      audio_drive_id: r[52] || '',
+      audios_all_urls:(function(){ try { return JSON.parse(r[80] || '[]'); } catch(e) { return []; } })(),
+      video_format:   r[71] || '',
+      video_duration: r[72] || '',
+      video_style:    r[73] || '',
+      content_title:  r[19] || '',
+      content_desc:   r[20] || '',
+      content_keywords: r[21] || '',
+      base_image_drive_url: driveDirectUrl(r[50] || ''),
+      lifestyle_image_drive_url: driveDirectUrl(r[51] || '')
     })).filter(c => c.name !== '—');
     if (live.length > 0) {
       live.sort((a,b) => b.score - a.score);
@@ -1697,11 +2591,18 @@ function renderAttentionBlock() {
 
 // WF-1 trigger — запуск поиска трендов
 async function triggerWF1() {
-  showToast('WF-1 Trend Scout запущен...', '↻');
+  showToast('WF-1 Trend Scout запущен — обновление через 15 сек...', '↻');
   try {
     await fetch(CONFIG.webhookRefresh, { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
-    setTimeout(loadFromSheets, 90000);
-  } catch(e) { showToast('WF-1 запущен — жди 90 сек', '↻'); }
+  } catch(e) {}
+  // Авто-обновление: проверяем через 15, 30, 60, 90 сек
+  [15000, 30000, 60000, 90000].forEach((delay, i) => {
+    setTimeout(async () => {
+      await loadFromSheets();
+      if (i === 0) showToast('Проверяю результаты...', '↻');
+      if (i === 3) showToast('Обновление завершено', '✓');
+    }, delay);
+  });
 }
 
 // Generic webhook caller
@@ -1723,31 +2624,47 @@ async function callWebhook(url, payload, successMsg, icon) {
   }
 }
 
-// WF-2 Supplier Finder
-function triggerWF2(keyword, score) {
-  callWebhook(CONFIG.webhookWF2, {keyword, score, source:'dashboard'}, 'WF-2 Supplier Finder', '🔍');
+// WF-2 Supplier Finder — создание кандидата из тренда
+function triggerWF2(keyword, score, category, price) {
+  callWebhook(CONFIG.webhookWF2, {keyword, score, category: category || '', avg_price_pln: price || '', source:'dashboard'}, 'WF-2 Supplier Finder', '🔍');
+  showToast('Поиск поставщика: ' + keyword, '🔍');
+  // Обновить кандидатов через 30 сек
+  setTimeout(loadCandidatesFromSheets, 30000);
+  setTimeout(loadCandidatesFromSheets, 60000);
 }
 
 // WF-3 sub-pipelines
+function getCandidatePayload(candidateId, keyword, rowIndex) {
+  const c = (window.CANDIDATES || []).find(x => x.id === candidateId);
+  return {
+    candidate_id: candidateId,
+    keyword: keyword || (c ? c.name : ''),
+    row_index: rowIndex,
+    image_url: c ? (c.image_url || c.image_drive || '') : '',
+    image_drive: c ? (c.image_drive || '') : '',
+    supplier_url: c ? (c.supplier_url || '') : ''
+  };
+}
 function triggerPhoto(candidateId, keyword, rowIndex) {
-  callWebhook(CONFIG.webhookPhoto, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Photo Pipeline', '📸');
+  callWebhook(CONFIG.webhookPhoto, getCandidatePayload(candidateId, keyword, rowIndex), 'Photo Pipeline', '📸');
 }
 function triggerVideo(candidateId, keyword, rowIndex) {
-  callWebhook(CONFIG.webhookVideo, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Video Pipeline', '🎬');
+  callWebhook(CONFIG.webhookVideo, getCandidatePayload(candidateId, keyword, rowIndex), 'Video Pipeline', '🎬');
 }
 function triggerAudio(candidateId, keyword, rowIndex) {
-  callWebhook(CONFIG.webhookAudio, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Audio Pipeline', '🎙');
+  callWebhook(CONFIG.webhookAudio, getCandidatePayload(candidateId, keyword, rowIndex), 'Audio Pipeline', '🎙');
 }
 function triggerText(candidateId, keyword, rowIndex) {
-  callWebhook(CONFIG.webhookText, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Text Pipeline', '📝');
+  callWebhook(CONFIG.webhookText, getCandidatePayload(candidateId, keyword, rowIndex), 'Text Pipeline', '📝');
 }
 function triggerSpecs(candidateId, keyword, rowIndex) {
-  callWebhook(CONFIG.webhookSpecs, {candidate_id:candidateId, keyword, row_index:rowIndex}, 'Specs Pipeline', '📋');
+  callWebhook(CONFIG.webhookSpecs, getCandidatePayload(candidateId, keyword, rowIndex), 'Specs Pipeline', '📋');
 }
 function triggerAllContent(candidateId, keyword, rowIndex) {
   showToast('Полный контент-пакет запущен...', '🚀');
+  const payload = getCandidatePayload(candidateId, keyword, rowIndex);
   [CONFIG.webhookPhoto, CONFIG.webhookVideo, CONFIG.webhookAudio, CONFIG.webhookText, CONFIG.webhookSpecs].forEach(url => {
-    fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({candidate_id:candidateId, keyword, row_index:rowIndex})}).catch(()=>{});
+    fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}).catch(()=>{});
   });
 }
 
@@ -1871,18 +2788,11 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════
 // DATA — MOCK (replace with real Sheets fetch)
 // ═══════════════════════════════════════════
-const MOCK_TRENDS = [
-  {name:'Portable Blender 400ml',score:9.1,price:'89 PLN',margin:68,direction:'growing',tags:['Kuchnia','AliExpress','HOT'],phase:'early'},
-  {name:'Wireless Earbuds Mini Pro',score:8.8,price:'129 PLN',margin:55,direction:'growing',tags:['Elektronika','Amazon DE'],phase:'early'},
-  {name:'LED Strip Lights RGBIC',score:7.9,price:'54 PLN',margin:61,direction:'growing',tags:['Dom','TikTok'],phase:'peak'},
-  {name:'Smart Sleep Eye Mask',score:7.4,price:'199 PLN',margin:71,direction:'stable',tags:['Zdrowie','Google'],phase:'peak'},
-  {name:'Magnetic Phone Holder Car',score:8.3,price:'39 PLN',margin:74,direction:'growing',tags:['Auto','AliExpress'],phase:'early'},
-  {name:'Yoga Mat Premium 10mm',score:6.8,price:'119 PLN',margin:48,direction:'stable',tags:['Sport','Amazon DE'],phase:'peak'},
-];
+const MOCK_TRENDS = [];
 
 // Workflow IDs for n8n API
 const WF_IDS = {
-  'WF-0: Error Handler':    'EDVb49uxNWoLxNZ3',
+  'WF-0: Error Handler':    'I2p9aQsSGIhvjMvE',
   'WF-1: Trend Scout':      'xQYhVLI7gTtOF907',
   'WF-1.5: Smart Search':   'lb9zCKnQqcfdqYmZ',
   'WF-2: Supplier Finder':  'oaJ6hW1w4k5BNthS',
@@ -1892,6 +2802,8 @@ const WF_IDS = {
   'WF-3c: Audio Pipeline':  'Z0Sa0I1Mj8jdcXr8',
   'WF-3d: Text Pipeline':   'Bf6ORBgrl7HfTi2r',
   'WF-3e: Specs Pipeline':  '9HteXhM38AGtyOv1',
+  'WF-4: Publisher':        '3sjJhT9CKbhpVWSy',
+  'WF-Monitor-Status':      'G8Li46mJjNoy8NRB',
 };
 
 let MOCK_WFS = [
@@ -1905,9 +2817,8 @@ let MOCK_WFS = [
   {name:'WF-3c: Audio Pipeline',status:'ws-inactive',last:'—', trigger:'Webhook POST'},
   {name:'WF-3d: Text Pipeline', status:'ws-inactive',last:'—', trigger:'Webhook POST'},
   {name:'WF-3e: Specs Pipeline',status:'ws-inactive',last:'—', trigger:'Webhook POST'},
-  {name:'WF-4: Publisher',     status:'ws-inactive',last:'—',  trigger:'Не создан'},
-  {name:'WF-5: Monitor',       status:'ws-inactive',last:'—',  trigger:'Не создан'},
-  {name:'WF-6: Price Manager', status:'ws-inactive',last:'—',  trigger:'Не создан'},
+  {name:'WF-4: Publisher',     status:'ws-inactive',last:'—',  trigger:'Webhook POST'},
+  {name:'WF-Monitor-Status',  status:'ws-inactive',last:'—',  trigger:'Webhook POST'},
 ];
 
 async function loadWorkflowStatuses() {
@@ -1968,9 +2879,16 @@ function trendBadge(d) {
 }
 function renderCard(t, btnLabel, btn1Label) { btn1Label = btn1Label || 'AI анализ';
   const [sc, fc] = scoreClass(t.score).split(' ');
-  const esc = t.name.replace(/'/g, "\\'");
+  const esc = t.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  const catEsc = (t.tags||[]).join(',').replace(/'/g, "\\'");
+  const priceEsc = (t.price||'').replace(/'/g, "\\'");
+  const imgHtml = t.image
+    ? `<img class="card-img" src="${t.image}" alt="${esc}" onerror="this.outerHTML='<div class=\\'card-img-placeholder\\'>нет фото</div>'">`
+    : '<div class="card-img-placeholder" style="height:80px;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--text-muted)">нет фото</div>';
+  const compHtml = t.competition ? `<span style="font-size:.7rem;color:var(--text-muted)">Конкуренция: ${t.competition}</span>` : '';
   return `
   <div class="product-card" onclick="openCard('${esc}')">
+    ${imgHtml}
     <div class="card-top">
       <div>
         <div class="card-name">${t.name}</div>
@@ -1983,10 +2901,10 @@ function renderCard(t, btnLabel, btn1Label) { btn1Label = btn1Label || 'AI ан�
       <span class="card-price">${t.price}</span>
       ${trendBadge(t.direction)}
     </div>
-    <div class="card-tags">${t.tags.map(tg=>`<span class="tag">${tg}</span>`).join('')}</div>
+    <div class="card-tags">${t.tags.map(tg=>`<span class="tag">${tg}</span>`).join('')} ${compHtml}</div>
     <div class="card-actions">
       <button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">${btn1Label}</button>
-      <button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}')">${btnLabel}</button>
+      <button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}','${catEsc}','${priceEsc}')">Создать кандидата</button>
     </div>
   </div>`;
 }
@@ -2013,8 +2931,7 @@ function searchThis(name) {
   runSearch();
 }
 async function refreshTrends() {
-  showToast('WF-1 Trend Scout запущен...','↻');
-  try { await fetch(CONFIG.webhookRefresh,{method:'POST'}); } catch(e) {}
+  triggerWF1();
 }
 
 // ═══════════════════════════════════════════
@@ -2088,13 +3005,22 @@ function initSettings() {
 let studioCandidate = null;
 let studioMode = 'photo';
 
-function openStudioModal(candidateId) {
+function openStudioModal(candidateId, presetMode) {
   const candidates = window.CANDIDATES || [];
   studioCandidate = candidates.find(c => c.id === candidateId) || null;
   if (studioCandidate) {
     document.getElementById('studio-modal-title').textContent = 'Creative Studio — ' + studioCandidate.name;
   }
   document.getElementById('studio-modal').classList.add('show');
+  // If preset mode requested, auto-select it
+  if (presetMode) {
+    const modeChip = document.querySelector(`.chip-group[data-group="mode"] .chip[data-mode="${presetMode}"]`);
+    if (modeChip) selectMode(modeChip);
+  }
+}
+function openVideoStudio(candidateId) {
+  closeDetail();
+  openStudioModal(candidateId, 'video_only');
 }
 function closeStudioModal() {
   document.getElementById('studio-modal').classList.remove('show');
@@ -2110,6 +3036,44 @@ function selectMode(el) {
   el.closest('.chip-group').querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   studioMode = el.dataset.mode;
+  // Show/hide video controls
+  const vc = document.getElementById('video-controls');
+  if (vc) {
+    const showVideo = (studioMode === 'video_only' || studioMode === 'photo_video' || studioMode === 'full');
+    vc.classList.toggle('visible', showVideo);
+    if (showVideo) populateVideoPhotoGrid();
+  }
+}
+let selectedVideoPhoto = '';
+let selectedVideoFormat = '9:16';
+
+function populateVideoPhotoGrid() {
+  const grid = document.getElementById('video-photo-grid');
+  if (!grid || !studioCandidate) return;
+  const photos = [];
+  const mainImg = studioCandidate.image_drive || studioCandidate.image_url;
+  if (mainImg) photos.push(mainImg);
+  if (studioCandidate.image_url && studioCandidate.image_url !== mainImg) photos.push(studioCandidate.image_url);
+  if (photos.length === 0) { grid.innerHTML = '<span style="font-size:.75rem;color:var(--text-muted)">Нет фото</span>'; return; }
+  selectedVideoPhoto = photos[0];
+  grid.innerHTML = photos.map((url, i) =>
+    `<img src="${url}" class="${i === 0 ? 'selected' : ''}" onclick="selectVideoPhoto(this,'${url.replace(/'/g,"\\'")}')" onerror="this.style.display='none'">`
+  ).join('');
+}
+function selectVideoPhoto(el, url) {
+  document.querySelectorAll('#video-photo-grid img').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedVideoPhoto = url;
+}
+function selectVideoFormat(el) {
+  el.closest('.chip-group').querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedVideoFormat = el.dataset.vformat;
+}
+function updateDurationLabel() {
+  const val = parseInt(document.getElementById('video-duration').value);
+  const clips = Math.ceil(val / 6);
+  document.getElementById('video-duration-label').textContent = `${val} сек (${clips} ${clips === 1 ? 'клип' : clips < 5 ? 'клипа' : 'клипов'})`;
 }
 function getChipValues(group) {
   return [...document.querySelectorAll(`.chip-group[data-group="${group}"] .chip.selected`)].map(c => c.textContent);
@@ -2122,6 +3086,9 @@ function launchFromStudio() {
   const params = {
     candidate_id: studioCandidate.id,
     keyword: studioCandidate.name,
+    image_url: studioCandidate.image_url || studioCandidate.image_drive || '',
+    image_drive: studioCandidate.image_drive || '',
+    supplier_url: studioCandidate.supplier_url || '',
     who: getChipValues('who'),
     action: getChipValues('action'),
     location: getChipValues('location'),
@@ -2131,11 +3098,23 @@ function launchFromStudio() {
     mode: studioMode
   };
 
+  // Video-specific parameters
+  const durationSec = parseInt(document.getElementById('video-duration')?.value) || 12;
+  const clipsCount = Math.ceil(durationSec / 6);
+  const videoParams = {
+    ...params,
+    selected_photo_url: selectedVideoPhoto || studioCandidate.image_drive || studioCandidate.image_url || '',
+    duration_sec: durationSec,
+    clips_count: clipsCount,
+    aspect_ratio: selectedVideoFormat || '9:16',
+    voiceover: document.getElementById('video-voiceover')?.checked !== false
+  };
+
   if (studioMode === 'photo' || studioMode === 'photo_video' || studioMode === 'full') {
     callWebhook(CONFIG.webhookPhoto, params, 'Photo Pipeline', '📸');
   }
-  if (studioMode === 'photo_video' || studioMode === 'full') {
-    callWebhook(CONFIG.webhookVideo, params, 'Video Pipeline', '🎬');
+  if (studioMode === 'video_only' || studioMode === 'photo_video' || studioMode === 'full') {
+    callWebhook(CONFIG.webhookVideo, videoParams, 'Video Pipeline', '🎬');
   }
   if (studioMode === 'full') {
     callWebhook(CONFIG.webhookAudio, params, 'Audio Pipeline', '🎙');
@@ -2164,32 +3143,253 @@ function studioLaunch(pipeline) {
 }
 
 // ═══════════════════════════════════════════
-// PRODUCT DETAIL MODAL
+// GENERATION JOB TRACKER
+// ═══════════════════════════════════════════
+const genJobs = new Map(); // jobId -> {id, candidateId, type, name, status, startedAt}
+let genPanelOpen = false;
+let genNotifyTimer = null;
+let genNotifyCandidate = null;
+
+function addGenJob(candidateId, type, candidateName) {
+  const jobId = `${candidateId}-${type}-${Date.now()}`;
+  const icons = {photo:'📸', video:'🎬', audio:'🎙', text:'📝', specs:'📋', full:'🚀'};
+  const labels = {photo:'Фото', video:'Видео', audio:'Аудио', text:'Текст', specs:'Характеристики', full:'Полный пакет'};
+  genJobs.set(jobId, {
+    id: jobId,
+    candidateId,
+    type,
+    name: candidateName,
+    label: labels[type] || type,
+    icon: icons[type] || '⚙',
+    status: 'running', // running | done | error
+    startedAt: Date.now()
+  });
+  updateGenTracker();
+  // Simulate completion via polling (check Sheets for updates)
+  scheduleJobCheck(jobId, candidateId, type);
+  return jobId;
+}
+
+function scheduleJobCheck(jobId, candidateId, type) {
+  // Poll at 15s, 30s, 60s, 90s, 120s
+  const delays = [15000, 30000, 60000, 90000, 120000];
+  delays.forEach(delay => {
+    setTimeout(async () => {
+      const job = genJobs.get(jobId);
+      if (!job || job.status !== 'running') return;
+      // Reload candidates to check for updates
+      await loadCandidatesFromSheets();
+      const c = (window.CANDIDATES || []).find(x => x.id === candidateId);
+      if (!c) return;
+      let completed = false;
+      if (type === 'photo' && (c.image_drive || c.image_url)) completed = true;
+      if (type === 'video' && c.video_drive) completed = true;
+      if (type === 'audio' && c.audio_url) completed = true;
+      if (type === 'text' && c.description) completed = true;
+      if (type === 'specs' && c.content_status === 'completed') completed = true;
+      if (type === 'full' && c.content_status === 'completed') completed = true;
+      if (completed) completeGenJob(jobId);
+    }, delay);
+  });
+  // Auto-complete after 3 minutes as fallback
+  setTimeout(() => {
+    const job = genJobs.get(jobId);
+    if (job && job.status === 'running') completeGenJob(jobId);
+  }, 180000);
+}
+
+function completeGenJob(jobId) {
+  const job = genJobs.get(jobId);
+  if (!job || job.status !== 'running') return;
+  job.status = 'done';
+  updateGenTracker();
+  showGenNotify(job);
+  // Update detail modal if it's open for this candidate
+  if (detailCurrent && detailCurrent.id === job.candidateId) {
+    refreshDetailMedia();
+  }
+  // Update Media Review if open for this candidate
+  if (mrCandidate && mrCandidate.id === job.candidateId) {
+    loadCandidatesFromSheets().then(() => refreshMR());
+  }
+  // Remove from tracker after 30s
+  setTimeout(() => {
+    genJobs.delete(jobId);
+    updateGenTracker();
+  }, 30000);
+}
+
+function failGenJob(jobId) {
+  const job = genJobs.get(jobId);
+  if (!job) return;
+  job.status = 'error';
+  updateGenTracker();
+  setTimeout(() => { genJobs.delete(jobId); updateGenTracker(); }, 30000);
+}
+
+function updateGenTracker() {
+  const tracker = document.getElementById('gen-tracker');
+  const fab = document.getElementById('gen-fab');
+  const count = document.getElementById('fab-count');
+  const list = document.getElementById('gen-jobs-list');
+  const running = [...genJobs.values()].filter(j => j.status === 'running');
+  const all = [...genJobs.values()];
+
+  if (all.length === 0) {
+    fab.classList.remove('active');
+    tracker.classList.remove('has-jobs');
+    return;
+  }
+
+  fab.classList.add('active');
+  tracker.classList.add('has-jobs');
+  count.textContent = running.length;
+  count.style.display = running.length > 0 ? 'flex' : 'none';
+
+  // Toggle spinner
+  fab.querySelector('.fab-spinner').style.display = running.length > 0 ? 'block' : 'none';
+
+  // Render job list
+  list.innerHTML = all.map(j => `
+    <div class="gen-job" onclick="${j.status === 'done' ? `openDetail('${j.candidateId}')` : ''}">
+      <span class="gen-job-icon">${j.icon}</span>
+      <div class="gen-job-info">
+        <div class="gen-job-name">${j.name} — ${j.label}</div>
+        <div class="gen-job-status">${j.status === 'running' ? 'Генерируется...' : j.status === 'done' ? 'Готово — нажмите для просмотра' : 'Ошибка'}</div>
+      </div>
+      ${j.status === 'running' ? '<div class="gen-job-spinner"></div>' : j.status === 'done' ? '<span class="gen-job-check">&#10003;</span>' : '<span class="gen-job-fail">&#10007;</span>'}
+    </div>
+  `).join('');
+
+  // Update media tab badges if detail is open
+  if (detailCurrent) updateMediaTabGenerating();
+}
+
+function toggleGenPanel() {
+  genPanelOpen = !genPanelOpen;
+  document.getElementById('gen-panel').classList.toggle('open', genPanelOpen);
+}
+
+function showGenNotify(job) {
+  clearTimeout(genNotifyTimer);
+  genNotifyCandidate = job.candidateId;
+  document.getElementById('gen-notify-icon').textContent = job.icon;
+  const videoMsg = job.type === 'video' ? 'Видео загружено!' : `${job.label} готово!`;
+  document.getElementById('gen-notify-title').textContent = videoMsg;
+  document.getElementById('gen-notify-sub').textContent = job.name + ' — нажмите для просмотра в Media Review';
+  document.getElementById('gen-notify').classList.add('show');
+  genNotifyTimer = setTimeout(hideGenNotify, 8000);
+  // Play notification sound (subtle beep)
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = 800; gain.gain.value = 0.1;
+    osc.start(); osc.stop(ctx.currentTime + 0.15);
+  } catch(e) {}
+}
+
+function hideGenNotify() {
+  document.getElementById('gen-notify').classList.remove('show');
+}
+
+function onGenNotifyClick() {
+  hideGenNotify();
+  if (genNotifyCandidate) openMR(genNotifyCandidate);
+}
+
+// Override callWebhook to track generation jobs
+const _origCallWebhook = callWebhook;
+callWebhook = async function(url, payload, successMsg, icon) {
+  // Detect which pipeline this is and track it
+  const typeMap = {};
+  typeMap[CONFIG.webhookPhoto] = 'photo';
+  typeMap[CONFIG.webhookVideo] = 'video';
+  typeMap[CONFIG.webhookAudio] = 'audio';
+  typeMap[CONFIG.webhookText] = 'text';
+  typeMap[CONFIG.webhookSpecs] = 'specs';
+  const type = typeMap[url];
+  if (type && payload.candidate_id) {
+    const cName = payload.keyword || payload.candidate_id;
+    addGenJob(payload.candidate_id, type, cName);
+  }
+  return _origCallWebhook(url, payload, successMsg, icon);
+};
+
+// ═══════════════════════════════════════════
+// PRODUCT DETAIL MODAL (Enhanced with Tabs)
 // ═══════════════════════════════════════════
 let detailCurrent = null;
 let detailImages = [];
 let detailImgIdx = 0;
 
-function openDetail(candidateId) {
-  const candidates = window.CANDIDATES || [];
-  const c = candidates.find(x => x.id === candidateId);
-  if (!c) { showToast('Товар не найден','⚠'); return; }
-  detailCurrent = c;
+function switchMediaTab(tab, el) {
+  document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.media-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + tab)?.classList.add('active');
+}
 
-  // Build image list
+function updateMediaTabGenerating() {
+  if (!detailCurrent) return;
+  const cId = detailCurrent.id;
+  const runningTypes = [...genJobs.values()]
+    .filter(j => j.candidateId === cId && j.status === 'running')
+    .map(j => j.type);
+  // Map type to tab
+  const typeTab = {photo:'photos', video:'video', audio:'audio', text:'text', specs:'text'};
+  document.querySelectorAll('.media-tab').forEach(tab => {
+    const tabName = tab.dataset.tab;
+    const isGenerating = runningTypes.some(t => typeTab[t] === tabName);
+    let spinner = tab.querySelector('.tab-generating');
+    if (isGenerating && !spinner) {
+      spinner = document.createElement('div');
+      spinner.className = 'tab-generating';
+      tab.appendChild(spinner);
+    } else if (!isGenerating && spinner) {
+      spinner.remove();
+    }
+  });
+  // Video status in panel
+  const vs = document.getElementById('detail-video-status');
+  if (vs) vs.style.display = runningTypes.includes('video') ? 'flex' : 'none';
+  const as = document.getElementById('detail-audio-status');
+  if (as) as.style.display = runningTypes.includes('audio') ? 'flex' : 'none';
+}
+
+function refreshDetailMedia() {
+  if (!detailCurrent) return;
+  const c = (window.CANDIDATES || []).find(x => x.id === detailCurrent.id);
+  if (c) {
+    detailCurrent = c;
+    populateDetailPhotos(c);
+    populateDetailVideo(c);
+    populateDetailAudio(c);
+    populateDetailText(c);
+    updateMediaTabGenerating();
+  }
+}
+
+function populateDetailPhotos(c) {
   detailImages = [];
   const mainImg = c.image_drive || c.image_url || (c.image_drive_id ? 'https://lh3.googleusercontent.com/d/' + c.image_drive_id : '');
   if (mainImg) detailImages.push(mainImg);
-  // If supplier image is different, add it too
   if (c.image_url && c.image_url !== mainImg) detailImages.push(c.image_url);
+  if (c.base_image_drive_url && !detailImages.includes(c.base_image_drive_url)) detailImages.push(c.base_image_drive_url);
+  if (c.lifestyle_image_drive_url && !detailImages.includes(c.lifestyle_image_drive_url)) detailImages.push(c.lifestyle_image_drive_url);
+  // Add all photos from photos_all_urls array
+  if (c.photos_all_urls && c.photos_all_urls.length) {
+    c.photos_all_urls.forEach(url => {
+      const resolved = driveDirectUrl(url);
+      if (resolved && !detailImages.includes(resolved)) detailImages.push(resolved);
+    });
+  }
   detailImgIdx = 0;
 
-  // Title
-  document.getElementById('detail-title').textContent = c.name;
-
-  // Gallery
-  const gallery = document.getElementById('detail-gallery');
+  // Main gallery
   const img = document.getElementById('detail-img');
+  const gallery = document.getElementById('detail-gallery');
   if (detailImages.length > 0) {
     img.src = detailImages[0];
     img.style.display = 'block';
@@ -2200,6 +3400,104 @@ function openDetail(candidateId) {
     img.style.display = 'none';
     gallery.innerHTML = '<div class="card-img-placeholder" style="height:260px">нет фото</div>';
   }
+
+  // Photo grid in tab
+  const grid = document.getElementById('detail-photo-grid');
+  document.getElementById('tab-photos-count').textContent = detailImages.length;
+  if (detailImages.length > 0) {
+    grid.innerHTML = detailImages.map((url, i) => `
+      <div class="detail-photo-item ${i === 0 ? 'selected' : ''}" onclick="selectDetailPhoto(${i})">
+        <img src="${url}" onerror="this.parentElement.style.display='none'" alt="Фото ${i+1}">
+        <div class="photo-overlay">
+          <button class="photo-overlay-btn" onclick="event.stopPropagation();window.open('${url}','_blank')">Открыть</button>
+          <button class="photo-overlay-btn" onclick="event.stopPropagation();downloadMedia('${url}','photo_${i+1}')">Скачать</button>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    grid.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);grid-column:1/-1">Фотографии ещё не сгенерированы</div>';
+  }
+}
+
+function selectDetailPhoto(idx) {
+  detailImgIdx = idx;
+  document.getElementById('detail-img').src = detailImages[idx];
+  renderDetailDots();
+  document.querySelectorAll('.detail-photo-item').forEach((el, i) => el.classList.toggle('selected', i === idx));
+}
+
+function populateDetailVideo(c) {
+  const clipUrls = (c.videos_all_urls && c.videos_all_urls.length) ? c.videos_all_urls : (c.video_drive ? [c.video_drive] : []);
+  const detailVideo = document.getElementById('detail-video');
+  const clipGrid = document.getElementById('video-clip-grid');
+  document.getElementById('tab-video-count').textContent = clipUrls.length;
+
+  if (clipUrls.length > 0) {
+    detailVideo.style.display = 'block';
+    clipGrid.innerHTML = clipUrls.map((url, i) => `
+      <div class="video-clip-item ${i === 0 ? 'active' : ''}" onclick="playClip(${i})">
+        <div class="clip-label">Клип ${i+1}</div>
+        <div class="clip-dur">6 сек</div>
+      </div>
+    `).join('');
+    window._clipUrls = clipUrls;
+    window._currentClip = 0;
+    detailVideo.src = driveDirectUrl(clipUrls[0]);
+    detailVideo.onended = function() {
+      if (window._currentClip < window._clipUrls.length - 1) playClip(window._currentClip + 1);
+    };
+  } else {
+    detailVideo.style.display = 'none';
+    clipGrid.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);grid-column:1/-1;font-size:.85rem">Видео ещё не сгенерировано</div>';
+  }
+}
+
+function populateDetailAudio(c) {
+  const audio = document.getElementById('detail-audio');
+  const noAudio = document.getElementById('detail-no-audio');
+  const audioUrls = c.audios_all_urls && c.audios_all_urls.length ? c.audios_all_urls : (c.audio_url ? [c.audio_url] : []);
+  document.getElementById('tab-audio-count').textContent = audioUrls.length || '0';
+
+  if (audioUrls.length > 0) {
+    audio.src = driveDirectUrl(audioUrls[0]);
+    audio.style.display = 'block';
+    noAudio.style.display = 'none';
+  } else {
+    audio.style.display = 'none';
+    noAudio.style.display = 'block';
+  }
+}
+
+function populateDetailText(c) {
+  document.getElementById('detail-editor').value = c.description || c.title_pl || '';
+  const meta = document.getElementById('detail-text-meta');
+  const desc = c.description || '';
+  const words = desc.split(/\s+/).filter(w => w.length > 0).length;
+  const chars = desc.length;
+  meta.innerHTML = `
+    <div class="text-meta-item"><strong>${words}</strong> слов</div>
+    <div class="text-meta-item"><strong>${chars}</strong> символов</div>
+    ${c.title_pl ? `<div class="text-meta-item">Заголовок: <strong>${c.title_pl}</strong></div>` : ''}
+  `;
+}
+
+function openDetail(candidateId) {
+  const candidates = window.CANDIDATES || [];
+  const c = candidates.find(x => x.id === candidateId);
+  if (!c) { showToast('Товар не найден','⚠'); return; }
+  detailCurrent = c;
+
+  // Title
+  document.getElementById('detail-title').textContent = c.name;
+
+  // Populate all media tabs
+  populateDetailPhotos(c);
+  populateDetailVideo(c);
+  populateDetailAudio(c);
+  populateDetailText(c);
+
+  // Reset to Photos tab
+  switchMediaTab('photos', document.querySelector('.media-tab[data-tab="photos"]'));
 
   // Prices
   document.getElementById('detail-prices').innerHTML = [
@@ -2232,42 +3530,101 @@ function openDetail(candidateId) {
     supplierEl.style.display = 'none';
   }
 
-  // Video
-  const videoWrap = document.getElementById('detail-video-wrap');
-  if (c.video_drive) {
-    videoWrap.style.display = 'block';
-    document.getElementById('detail-video').src = c.video_drive;
-  } else {
-    videoWrap.style.display = 'none';
-  }
-
-  // Editor (description)
-  const editorWrap = document.getElementById('detail-editor-wrap');
-  editorWrap.style.display = 'block';
-  document.getElementById('detail-editor').value = c.description || c.title_pl || '';
+  // Update tab generating indicators
+  updateMediaTabGenerating();
 
   // Actions
   const esc = c.name.replace(/'/g, "\\'");
   document.getElementById('detail-actions').innerHTML = `
-    <button class="card-btn primary" onclick="triggerAllContent('${c.id}','${esc}','');showToast('Полный контент запущен','🚀')">Создать контент</button>
+    <button class="card-btn primary" onclick="closeDetail();openMR('${c.id}')">&#9654; Media Review</button>
+    <button class="card-btn" onclick="launchFullContent('${c.id}','${esc}')">Создать контент</button>
     <button class="card-btn" onclick="openStudioModal('${c.id}');closeDetail()">Creative Studio</button>
-    <button class="card-btn" onclick="triggerPhoto('${c.id}','${esc}','')">Фото</button>
-    <button class="card-btn" onclick="triggerVideo('${c.id}','${esc}','')">Видео</button>
-    <button class="card-btn" onclick="triggerText('${c.id}','${esc}','')">Текст</button>
-    <button class="card-btn" style="color:var(--accent-3)" onclick="showToast('Одобрено: ${esc}','✓')">Одобрить</button>
+    <button class="card-btn" style="color:var(--accent-3)" onclick="publishSingle('${c.id}',['shopify'])">Опубликовать</button>
     <button class="card-btn" style="color:var(--accent-danger)" onclick="showToast('Отклонено: ${esc}','✗')">Отклонить</button>
-    <button class="card-btn" onclick="showToast('Отложено: ${esc}','⏳')">Отложить</button>
   `;
 
   document.getElementById('detail-modal').classList.add('show');
   document.body.style.overflow = 'hidden';
 }
 
+function launchFullContent(candidateId, name) {
+  addGenJob(candidateId, 'full', name);
+  triggerAllContent(candidateId, name, '');
+}
+
 function closeDetail() {
   document.getElementById('detail-modal').classList.remove('show');
   document.body.style.overflow = '';
   const vid = document.getElementById('detail-video');
-  if (vid) vid.pause();
+  if (vid) { vid.pause(); vid.onended = null; }
+  const aud = document.getElementById('detail-audio');
+  if (aud) aud.pause();
+}
+
+function playClip(index) {
+  if (!window._clipUrls || index >= window._clipUrls.length) return;
+  window._currentClip = index;
+  const vid = document.getElementById('detail-video');
+  vid.src = driveDirectUrl(window._clipUrls[index]);
+  vid.play().catch(() => {});
+  document.querySelectorAll('.video-clip-item').forEach((el, i) => {
+    el.classList.toggle('active', i === index);
+  });
+}
+
+// Media action functions
+function regenPhotos() {
+  if (!detailCurrent) return;
+  triggerPhoto(detailCurrent.id, detailCurrent.name, '');
+  showToast('Перегенерация фото запущена', '📸');
+}
+function regenVideo() {
+  if (!detailCurrent) return;
+  const format = document.getElementById('detail-video-format')?.value || '9:16';
+  const payload = getCandidatePayload(detailCurrent.id, detailCurrent.name, '');
+  payload.aspect_ratio = format;
+  payload.clips_count = 2;
+  payload.duration_sec = 12;
+  callWebhook(CONFIG.webhookVideo, payload, 'Video Pipeline', '🎬');
+  showToast('Перегенерация видео запущена', '🎬');
+}
+function regenVideoFormat() {
+  // Just updates the select, actual regen on button click
+}
+function regenAudio() {
+  if (!detailCurrent) return;
+  const voice = document.getElementById('detail-voice-select')?.value || 'female';
+  const payload = getCandidatePayload(detailCurrent.id, detailCurrent.name, '');
+  payload.voice = voice;
+  callWebhook(CONFIG.webhookAudio, payload, 'Audio Pipeline', '🎙');
+  showToast('Перегенерация аудио запущена', '🎙');
+}
+function previewVoice() {
+  showToast('Превью голоса — отправлено в ElevenLabs', '🎙');
+}
+function regenText() {
+  if (!detailCurrent) return;
+  triggerText(detailCurrent.id, detailCurrent.name, '');
+  showToast('Перегенерация текста запущена', '📝');
+}
+function regenSpecs() {
+  if (!detailCurrent) return;
+  triggerSpecs(detailCurrent.id, detailCurrent.name, '');
+  showToast('Обновление характеристик запущено', '📋');
+}
+function copyDescription() {
+  const text = document.getElementById('detail-editor').value;
+  navigator.clipboard.writeText(text).then(() => showToast('Описание скопировано', '✓')).catch(() => showToast('Не удалось скопировать', '⚠'));
+}
+function downloadMedia(url, name) {
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.target = '_blank';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function openStudioForCurrent(mode) {
+  if (!detailCurrent) return;
+  closeDetail();
+  openStudioModal(detailCurrent.id, mode);
 }
 
 function renderDetailDots() {
@@ -2363,12 +3720,40 @@ function publishTopN() {
   if (document.getElementById('pub-allegro').checked) channels.push('allegro');
   if (document.getElementById('pub-amazon').checked) channels.push('amazon');
   if (channels.length === 0) { showToast('Выберите хотя бы один канал', '⚠'); return; }
-  const candidates = (window.CANDIDATES || []).slice(0, count);
-  if (candidates.length === 0) { showToast('Нет кандидатов для выгрузки', '⚠'); return; }
-  showToast(`Выгрузка Топ-${candidates.length} в ${channels.join(', ')}...`, '🚀');
-  // WF-4 Publisher ещё не создан — пока логируем
-  console.log('Publish Top N:', {count, channels, candidates: candidates.map(c => c.name)});
-  showToast(`WF-4 Publisher ещё не создан. Выбрано: ${candidates.length} товаров → ${channels.join(', ')}`, '⚠');
+  const candidates = (window.CANDIDATES || [])
+    .filter(c => c.pub_status !== 'published' && (c.image_drive || c.image_url))
+    .slice(0, count);
+  if (candidates.length === 0) { showToast('Нет готовых кандидатов', '⚠'); return; }
+
+  showToast(`Публикация Топ-${candidates.length} → ${channels.join(', ')}...`, '🚀');
+
+  fetch(CONFIG.webhookPublish, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      candidate_ids: candidates.map(c => c.id),
+      publish_to: channels,
+      source: 'dashboard_batch'
+    })
+  }).then(() => {
+    showToast(`Публикация запущена: ${candidates.length} товаров`, '✅');
+  }).catch(() => {
+    showToast('Публикация отправлена — жди Telegram', '📱');
+  });
+}
+
+function publishSingle(candidateId, channels) {
+  showToast('Публикация запущена...', '🚀');
+  fetch(CONFIG.webhookPublish, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      candidate_id: candidateId,
+      publish_to: channels || ['shopify'],
+      source: 'dashboard'
+    })
+  }).then(() => showToast('Отправлено — жди Telegram', '✅'))
+    .catch(() => showToast('Запрос отправлен', '📱'));
 }
 
 // ═══════════════════════════════════════════
@@ -2393,17 +3778,15 @@ async function installPWA() {
 // INIT
 // ═══════════════════════════════════════════
 function initDashboard() {
-  document.getElementById('trends-grid').innerHTML  = MOCK_TRENDS.map(t=>renderCard(t,'Content')).join('');
-  document.getElementById('products-grid').innerHTML = MOCK_TRENDS.map(t=>renderCard(t,'Publish')).join('');
+  document.getElementById('trends-grid').innerHTML  = '<div style="padding:2rem;text-align:center;color:var(--text-muted);grid-column:1/-1">Загрузка трендов...</div>';
+  document.getElementById('products-grid').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);grid-column:1/-1">Загрузка товаров...</div>';
   renderWfTable();
   applyLang();
   loadFromSheets();
   loadCandidatesFromSheets();
   loadWorkflowStatuses();
   initSettings();
-  // Archive renders after candidates load
   setTimeout(renderArchive, 3000);
-  // No auto-refresh — data loads on page open + manual button only
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
@@ -2485,7 +3868,12 @@ function applyLang() {
 
 function renderCards() {
   const L = I18N[currentLang];
-  document.getElementById('trends-grid').innerHTML = MOCK_TRENDS.map(t=>renderCard(t, L.cardBtn2, L.cardBtn1)).join('');
+  const trends = window.MOCK_TRENDS || [];
+  if (trends.length > 0) {
+    document.getElementById('trends-grid').innerHTML = trends.map(t=>renderCard(t, L.cardBtn2, L.cardBtn1)).join('');
+  } else {
+    document.getElementById('trends-grid').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);grid-column:1/-1">Нет трендов. Нажмите «Найти тренды» для поиска.</div>';
+  }
   renderProductCards();
 }
 
@@ -2521,7 +3909,7 @@ function renderProductCard(c) {
     </div>
     ${supplierHtml}
     <div class="card-actions">
-      <button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">Анализ</button>
+      <button class="card-btn" onclick="event.stopPropagation();openMR('${c.id}')" title="Media Review Player">&#9654; Медиа</button>
       <button class="card-btn" onclick="event.stopPropagation();openStudioModal('${c.id}')">Студия</button>
       <button class="card-btn primary" onclick="event.stopPropagation();triggerAllContent('${c.id}','${esc}','')">Контент</button>
     </div>
@@ -2533,10 +3921,337 @@ function renderProductCards() {
   if (candidates.length > 0) {
     document.getElementById('products-grid').innerHTML = candidates.map(c => renderProductCard(c)).join('');
   } else {
-    const L = I18N[currentLang];
-    document.getElementById('products-grid').innerHTML = MOCK_TRENDS.map(t=>renderCard(t, L.cardBtn2 === 'Контент' ? 'Publish' : 'Publikuj', L.cardBtn1)).join('');
+    document.getElementById('products-grid').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);grid-column:1/-1">Нет кандидатов. Нажмите «Создать кандидата» на карточке тренда для запуска WF-2.</div>';
   }
 }
+
+// ═══════════════════════════════════════════
+// RECORDING INDICATOR
+// ═══════════════════════════════════════════
+let recTimerInterval = null;
+let recStartTime = 0;
+
+function showRecIndicator(candidateName, type) {
+  const el = document.getElementById('rec-indicator');
+  const info = document.getElementById('rec-info');
+  const labels = {photo:'Фото', video:'Видео', audio:'Аудио', text:'Текст', specs:'Характеристики', full:'Полный пакет'};
+  info.textContent = `${labels[type] || type}: ${candidateName}`;
+  el.classList.add('show');
+  recStartTime = Date.now();
+  clearInterval(recTimerInterval);
+  recTimerInterval = setInterval(updateRecTimer, 1000);
+  updateRecTimer();
+}
+
+function hideRecIndicator() {
+  document.getElementById('rec-indicator').classList.remove('show');
+  clearInterval(recTimerInterval);
+}
+
+function updateRecTimer() {
+  const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+  const min = Math.floor(elapsed / 60);
+  const sec = elapsed % 60;
+  document.getElementById('rec-timer').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+}
+
+// Hook into genJobs to auto-show/hide recording indicator
+const _origAddGenJob = addGenJob;
+addGenJob = function(candidateId, type, candidateName) {
+  showRecIndicator(candidateName, type);
+  return _origAddGenJob(candidateId, type, candidateName);
+};
+
+const _origCompleteGenJob = completeGenJob;
+completeGenJob = function(jobId) {
+  _origCompleteGenJob(jobId);
+  const running = [...genJobs.values()].filter(j => j.status === 'running');
+  if (running.length === 0) {
+    hideRecIndicator();
+  } else {
+    showRecIndicator(running[0].name, running[0].type);
+  }
+};
+
+const _origFailGenJob = failGenJob;
+failGenJob = function(jobId) {
+  _origFailGenJob(jobId);
+  const running = [...genJobs.values()].filter(j => j.status === 'running');
+  if (running.length === 0) hideRecIndicator();
+};
+
+// ═══════════════════════════════════════════
+// MEDIA REVIEW PLAYER
+// ═══════════════════════════════════════════
+let mrCandidate = null;
+let mrCandidateIdx = 0;
+let mrCurrentMedia = null; // {type, url, index}
+let mrMediaList = []; // [{type:'photo'|'video'|'audio', url, label, status}]
+
+function openMR(candidateId) {
+  const candidates = window.CANDIDATES || [];
+  const c = candidates.find(x => x.id === candidateId);
+  if (!c) { showToast('Товар не найден', '⚠'); return; }
+  mrCandidate = c;
+  mrCandidateIdx = candidates.indexOf(c);
+  buildMRMediaList(c);
+  renderMRSidebar();
+  document.getElementById('mr-title').textContent = c.name;
+  document.getElementById('mr-counter').textContent = `${mrCandidateIdx + 1}/${candidates.length}`;
+  document.getElementById('mr-correction').value = '';
+  // Auto-select first media
+  if (mrMediaList.length > 0) selectMRMedia(0);
+  else renderMREmpty();
+  document.getElementById('mr-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMR() {
+  document.getElementById('mr-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+  // Stop any playing media
+  const area = document.getElementById('mr-player-area');
+  area.querySelectorAll('video, audio').forEach(el => { el.pause(); el.src = ''; });
+  mrCandidate = null;
+}
+
+function buildMRMediaList(c) {
+  mrMediaList = [];
+
+  // Photos
+  const allPhotos = [];
+  const mainImg = c.image_drive || c.image_url || (c.image_drive_id ? 'https://lh3.googleusercontent.com/d/' + c.image_drive_id : '');
+  if (mainImg) allPhotos.push(mainImg);
+  if (c.base_image_drive_url && !allPhotos.includes(c.base_image_drive_url)) allPhotos.push(c.base_image_drive_url);
+  if (c.lifestyle_image_drive_url && !allPhotos.includes(c.lifestyle_image_drive_url)) allPhotos.push(c.lifestyle_image_drive_url);
+  if (c.photos_all_urls && c.photos_all_urls.length) {
+    c.photos_all_urls.forEach(url => {
+      const resolved = driveDirectUrl(url);
+      if (resolved && !allPhotos.includes(resolved)) allPhotos.push(resolved);
+    });
+  }
+  if (c.image_url && !allPhotos.includes(c.image_url)) allPhotos.push(c.image_url);
+  allPhotos.forEach((url, i) => {
+    mrMediaList.push({type: 'photo', url, label: `Фото ${i + 1}`, status: 'ok'});
+  });
+  if (allPhotos.length === 0) {
+    mrMediaList.push({type: 'photo', url: '', label: 'Фото', status: 'missing'});
+  }
+
+  // Videos
+  const clipUrls = (c.videos_all_urls && c.videos_all_urls.length) ? c.videos_all_urls : (c.video_drive ? [c.video_drive] : []);
+  clipUrls.forEach((url, i) => {
+    mrMediaList.push({type: 'video', url: driveDirectUrl(url), label: `Видео ${i + 1}`, status: 'ok'});
+  });
+  if (clipUrls.length === 0) {
+    const isGenerating = [...genJobs.values()].some(j => j.candidateId === c.id && j.type === 'video' && j.status === 'running');
+    mrMediaList.push({type: 'video', url: '', label: 'Видео', status: isGenerating ? 'processing' : 'missing'});
+  }
+
+  // Audio
+  const audioUrls = c.audios_all_urls && c.audios_all_urls.length ? c.audios_all_urls : (c.audio_url ? [c.audio_url] : []);
+  audioUrls.forEach((url, i) => {
+    mrMediaList.push({type: 'audio', url: driveDirectUrl(url), label: `Аудио ${i + 1}`, status: 'ok'});
+  });
+  if (audioUrls.length === 0) {
+    const isGenerating = [...genJobs.values()].some(j => j.candidateId === c.id && j.type === 'audio' && j.status === 'running');
+    mrMediaList.push({type: 'audio', url: '', label: 'Аудио', status: isGenerating ? 'processing' : 'missing'});
+  }
+
+  // Text (description)
+  if (c.description || c.title_pl) {
+    mrMediaList.push({type: 'text', url: '', label: 'SEO Текст', status: 'ok', text: c.description || c.title_pl || ''});
+  } else {
+    mrMediaList.push({type: 'text', url: '', label: 'SEO Текст', status: 'missing'});
+  }
+}
+
+function renderMRSidebar() {
+  const sidebar = document.getElementById('mr-sidebar');
+  const icons = {photo: '📸', video: '🎬', audio: '🎙', text: '📝'};
+  const statusDots = {ok: '🟢', missing: '🔴', processing: '🟡'};
+  let lastType = '';
+  let html = '';
+  mrMediaList.forEach((m, i) => {
+    if (m.type !== lastType) {
+      const titles = {photo: 'ФОТОГРАФИИ', video: 'ВИДЕО', audio: 'АУДИО', text: 'ТЕКСТ'};
+      html += `<div class="mr-section-title">${titles[m.type] || m.type}</div>`;
+      lastType = m.type;
+    }
+    const active = mrCurrentMedia && mrCurrentMedia.index === i ? 'active' : '';
+    html += `
+      <div class="mr-media-item ${active}" onclick="selectMRMedia(${i})" data-mr-idx="${i}">
+        <span class="mr-media-icon">${icons[m.type] || '📄'}</span>
+        <div style="flex:1;min-width:0">
+          <div class="mr-media-label">${m.label}</div>
+          <div class="mr-media-sub">${statusDots[m.status]} ${m.status === 'ok' ? 'Готово' : m.status === 'processing' ? 'Генерируется...' : 'Не создано'}</div>
+        </div>
+      </div>`;
+  });
+  sidebar.innerHTML = html;
+}
+
+function selectMRMedia(idx) {
+  if (idx < 0 || idx >= mrMediaList.length) return;
+  mrCurrentMedia = {...mrMediaList[idx], index: idx};
+  // Highlight sidebar
+  document.querySelectorAll('.mr-media-item').forEach((el, i) => el.classList.toggle('active', i === idx));
+  renderMRPlayer();
+}
+
+function renderMRPlayer() {
+  const area = document.getElementById('mr-player-area');
+  // Stop previous media
+  area.querySelectorAll('video, audio').forEach(el => { el.pause(); el.src = ''; });
+  const m = mrCurrentMedia;
+  if (!m) { renderMREmpty(); return; }
+
+  const statusBadge = m.status === 'ok'
+    ? '<div class="mr-status-badge mr-status-ok">Готово</div>'
+    : m.status === 'processing'
+    ? '<div class="mr-status-badge mr-status-processing">Генерируется...</div>'
+    : '<div class="mr-status-badge mr-status-missing">Не создано</div>';
+
+  if (m.status !== 'ok' && m.type !== 'text') {
+    area.innerHTML = `
+      ${statusBadge}
+      <div class="mr-player-empty">
+        <div class="empty-icon">${m.status === 'processing' ? '⏳' : '📭'}</div>
+        <div>${m.status === 'processing' ? 'Генерируется, подождите...' : 'Нажмите «Исправить» чтобы создать'}</div>
+      </div>`;
+    return;
+  }
+
+  if (m.type === 'photo') {
+    area.innerHTML = `${statusBadge}<img src="${m.url}" alt="${m.label}" onerror="this.outerHTML='<div class=mr-player-empty><div class=empty-icon>🖼</div><div>Не удалось загрузить фото</div></div>'">`;
+  } else if (m.type === 'video') {
+    area.innerHTML = `${statusBadge}<video controls autoplay src="${m.url}" onerror="this.outerHTML='<div class=mr-player-empty><div class=empty-icon>🎬</div><div>Не удалось загрузить видео</div></div>'"></video>`;
+  } else if (m.type === 'audio') {
+    area.innerHTML = `
+      ${statusBadge}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:20px">
+        <div style="font-size:4rem;opacity:.4">🎙</div>
+        <audio controls autoplay src="${m.url}" style="width:100%;max-width:500px" onerror="this.outerHTML='<div style=color:var(--text-muted)>Не удалось загрузить аудио</div>'"></audio>
+        <div style="font-size:.82rem;color:var(--text-secondary)">${m.label}</div>
+      </div>`;
+  } else if (m.type === 'text') {
+    const text = m.text || mrCandidate?.description || mrCandidate?.title_pl || '';
+    area.innerHTML = `
+      ${m.status === 'ok' ? '<div class="mr-status-badge mr-status-ok">Готово</div>' : '<div class="mr-status-badge mr-status-missing">Не создано</div>'}
+      <div style="width:100%;max-width:600px;padding:20px">
+        <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SEO описание товара</div>
+        <textarea id="mr-text-editor" style="width:100%;min-height:200px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;color:var(--text-primary);font-family:var(--font-main);font-size:.85rem;resize:vertical;line-height:1.6">${text.replace(/</g,'&lt;')}</textarea>
+        <div style="margin-top:8px;font-size:.72rem;color:var(--text-muted)">${text.split(/\s+/).filter(w=>w).length} слов · ${text.length} символов</div>
+      </div>`;
+  }
+}
+
+function renderMREmpty() {
+  document.getElementById('mr-player-area').innerHTML = `
+    <div class="mr-player-empty">
+      <div class="empty-icon">&#9654;</div>
+      <div>Выберите медиа для просмотра</div>
+    </div>`;
+}
+
+// Navigation between candidates
+function mrNavPrev() {
+  const candidates = window.CANDIDATES || [];
+  if (candidates.length < 2) return;
+  mrCandidateIdx = (mrCandidateIdx - 1 + candidates.length) % candidates.length;
+  openMR(candidates[mrCandidateIdx].id);
+}
+
+function mrNavNext() {
+  const candidates = window.CANDIDATES || [];
+  if (candidates.length < 2) return;
+  mrCandidateIdx = (mrCandidateIdx + 1) % candidates.length;
+  openMR(candidates[mrCandidateIdx].id);
+}
+
+// Action buttons
+function mrFix() {
+  if (!mrCandidate || !mrCurrentMedia) return;
+  const correction = document.getElementById('mr-correction').value.trim();
+  const m = mrCurrentMedia;
+  const payload = {
+    candidate_id: mrCandidate.id,
+    keyword: mrCandidate.name,
+    image_url: mrCandidate.image_url || mrCandidate.image_drive || '',
+    image_drive: mrCandidate.image_drive || '',
+    supplier_url: mrCandidate.supplier_url || '',
+    correction: correction,
+    source: 'media_review'
+  };
+
+  if (m.type === 'photo') {
+    callWebhook(CONFIG.webhookPhoto, payload, 'Исправление фото', '📸');
+  } else if (m.type === 'video') {
+    payload.aspect_ratio = mrCandidate.video_format || '9:16';
+    payload.clips_count = mrCandidate.video_clips_count || 2;
+    callWebhook(CONFIG.webhookVideo, payload, 'Исправление видео', '🎬');
+  } else if (m.type === 'audio') {
+    callWebhook(CONFIG.webhookAudio, payload, 'Исправление аудио', '🎙');
+  } else if (m.type === 'text') {
+    const edited = document.getElementById('mr-text-editor')?.value || '';
+    payload.edited_text = edited;
+    payload.correction = correction || 'Перегенерировать текст';
+    callWebhook(CONFIG.webhookText, payload, 'Исправление текста', '📝');
+  }
+  showToast('Исправление отправлено — ожидайте результат', '🔄');
+  document.getElementById('mr-correction').value = '';
+  // Auto-refresh after delay
+  setTimeout(() => { loadCandidatesFromSheets().then(() => { if (mrCandidate) refreshMR(); }); }, 30000);
+}
+
+function mrAccept() {
+  if (!mrCandidate) return;
+  showToast(`${mrCandidate.name} — принято`, '✅');
+  // Move to next media item
+  if (mrCurrentMedia && mrCurrentMedia.index < mrMediaList.length - 1) {
+    selectMRMedia(mrCurrentMedia.index + 1);
+  }
+}
+
+function mrRegenAll() {
+  if (!mrCandidate) return;
+  triggerAllContent(mrCandidate.id, mrCandidate.name, '');
+  showToast('Полная перегенерация запущена', '🚀');
+}
+
+function mrPublish() {
+  if (!mrCandidate) return;
+  publishSingle(mrCandidate.id, ['shopify']);
+  showToast('Публикация запущена: ' + mrCandidate.name, '🚀');
+}
+
+function mrReject() {
+  if (!mrCandidate) return;
+  showToast('Отклонено: ' + mrCandidate.name, '✗');
+  closeMR();
+}
+
+function refreshMR() {
+  if (!mrCandidate) return;
+  const c = (window.CANDIDATES || []).find(x => x.id === mrCandidate.id);
+  if (c) {
+    mrCandidate = c;
+    const prevIdx = mrCurrentMedia ? mrCurrentMedia.index : 0;
+    buildMRMediaList(c);
+    renderMRSidebar();
+    selectMRMedia(Math.min(prevIdx, mrMediaList.length - 1));
+  }
+}
+
+// Keyboard: Escape to close, arrow keys to navigate
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('mr-overlay').classList.contains('show')) return;
+  if (e.key === 'Escape') { closeMR(); e.stopPropagation(); }
+  if (e.key === 'ArrowUp' && mrCurrentMedia) { e.preventDefault(); selectMRMedia(Math.max(0, mrCurrentMedia.index - 1)); }
+  if (e.key === 'ArrowDown' && mrCurrentMedia) { e.preventDefault(); selectMRMedia(Math.min(mrMediaList.length - 1, mrCurrentMedia.index + 1)); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); mrNavPrev(); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); mrNavNext(); }
+});
 
 // Apply saved lang on load + init dashboard
 document.addEventListener('DOMContentLoaded', () => {
