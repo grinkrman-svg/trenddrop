@@ -613,11 +613,24 @@ main {
   box-shadow: 0 12px 40px rgba(0,0,0,0.25);
 }
 .card-body {
-  padding: .8rem 1rem;
+  padding: .6rem .8rem .8rem;
   display: flex;
   flex-direction: column;
-  gap: .5rem;
+  gap: .4rem;
   flex: 1;
+  min-height: 0;
+}
+.card-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: auto;
+  justify-content: center;
+}
+.card-btn {
+  flex: 1;
+  padding: 7px 6px;
+  font-size: .75rem;
+  text-align: center;
 }
 .card-top {
   display: flex;
@@ -626,10 +639,14 @@ main {
   gap: .5rem;
 }
 .card-name {
-  font-size: clamp(1rem, 1.8vw, 1.1rem);
+  font-size: .85rem;
   font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.35;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .card-source {
   font-size: .78rem;
@@ -1015,11 +1032,10 @@ main {
 .detail-supplier-info strong { color:var(--text-primary); display:block; }
 .detail-editor { width:100%; min-height:80px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; color:var(--text-primary); font-family:var(--font-main); font-size:.85rem; resize:vertical; margin:.5rem 0; }
 
-/* Card image */
-/* Card image — fills top of vertical card, 2:3 aspect */
-.card-img { width:100%; height:0; padding-bottom:133%; object-fit:cover; display:block; }
-.card-img-placeholder { width:100%; height:0; padding-bottom:100%; background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:.8rem; color:var(--text-muted); border-bottom:1px dashed var(--border); position:relative; }
-.card-img-placeholder::after { content:'нет фото'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+/* Card image — fills top of vertical card */
+.card-img-wrap { width:100%; aspect-ratio:3/4; overflow:hidden; flex-shrink:0; position:relative; background:var(--bg-input); }
+.card-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+.card-img-placeholder { width:100%; aspect-ratio:3/4; background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:.8rem; color:var(--text-muted); border-bottom:1px dashed var(--border); flex-shrink:0; }
 
 /* Archive filters */
 .archive-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
@@ -1915,55 +1931,95 @@ main {
           <div class="channel-name">Shopify</div>
           <div class="channel-badge cb-connected">Активен</div>
         </div>
-        <div class="channel-desc">gadzelo.myshopify.com · WF-4a активен</div>
+        <div class="channel-desc">gadzelo.myshopify.com · WF-4a</div>
         <button class="channel-btn active-btn" onclick="publishTopN()">Опубликовать</button>
       </div>
       <div class="channel-card stub">
         <div class="channel-top">
-          <div class="channel-name">Allegro</div>
-          <div class="channel-badge cb-stub">Заглушка</div>
+          <div class="channel-name">Allegro PL</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
         </div>
-        <div class="channel-desc">Аккаунт продавца ещё не создан</div>
+        <div class="channel-desc">Аккаунт продавца Allegro</div>
+        <button class="channel-btn" disabled>Настроить</button>
+      </div>
+      <div class="channel-card stub">
+        <div class="channel-top">
+          <div class="channel-name">Amazon DE</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
+        </div>
+        <div class="channel-desc">Amazon Seller Central Germany</div>
+        <button class="channel-btn" disabled>Настроить</button>
+      </div>
+      <div class="channel-card stub">
+        <div class="channel-top">
+          <div class="channel-name">eBay EU</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
+        </div>
+        <div class="channel-desc">eBay.de / eBay.pl</div>
+        <button class="channel-btn" disabled>Настроить</button>
+      </div>
+      <div class="channel-card stub">
+        <div class="channel-top">
+          <div class="channel-name">Etsy</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
+        </div>
+        <div class="channel-desc">Etsy.com — уникальные товары</div>
         <button class="channel-btn" disabled>Настроить</button>
       </div>
       <div class="channel-card stub">
         <div class="channel-top">
           <div class="channel-name">Facebook Shop</div>
-          <div class="channel-badge cb-stub">Заглушка</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
         </div>
-        <div class="channel-desc">Meta Business не подключён</div>
+        <div class="channel-desc">Meta Business Commerce</div>
         <button class="channel-btn" disabled>Подключить</button>
       </div>
       <div class="channel-card stub">
         <div class="channel-top">
-          <div class="channel-name">Instagram Reels</div>
-          <div class="channel-badge cb-stub">Заглушка</div>
+          <div class="channel-name">Instagram Shop</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
         </div>
-        <div class="channel-desc">Требует Meta Business</div>
+        <div class="channel-desc">Instagram Shopping + Reels</div>
         <button class="channel-btn" disabled>Подключить</button>
       </div>
       <div class="channel-card stub">
         <div class="channel-top">
-          <div class="channel-name">Amazon DE</div>
-          <div class="channel-badge cb-stub">Заглушка</div>
+          <div class="channel-name">TikTok Shop</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
         </div>
-        <div class="channel-desc">Amazon Seller Central — ожидает настройки</div>
-        <button class="channel-btn" disabled>Настроить</button>
-      </div>
-      <div class="channel-card stub">
-        <div class="channel-top">
-          <div class="channel-name">TikTok</div>
-          <div class="channel-badge cb-stub">Заглушка</div>
-        </div>
-        <div class="channel-desc">TikTok Shop недоступен в PL</div>
+        <div class="channel-desc">TikTok Shop EU — скоро в PL</div>
         <button class="channel-btn" disabled>Ожидание</button>
       </div>
       <div class="channel-card stub">
         <div class="channel-top">
-          <div class="channel-name">Свой сайт</div>
-          <div class="channel-badge cb-stub">Заглушка</div>
+          <div class="channel-name">Kaufland DE</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
         </div>
-        <div class="channel-desc">URL сайта не задан</div>
+        <div class="channel-desc">Kaufland.de marketplace</div>
+        <button class="channel-btn" disabled>Настроить</button>
+      </div>
+      <div class="channel-card stub">
+        <div class="channel-top">
+          <div class="channel-name">Cdiscount FR</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
+        </div>
+        <div class="channel-desc">Cdiscount.com — Франция</div>
+        <button class="channel-btn" disabled>Настроить</button>
+      </div>
+      <div class="channel-card stub">
+        <div class="channel-top">
+          <div class="channel-name">Bol.com</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
+        </div>
+        <div class="channel-desc">Bol.com — NL/BE marketplace</div>
+        <button class="channel-btn" disabled>Настроить</button>
+      </div>
+      <div class="channel-card stub">
+        <div class="channel-top">
+          <div class="channel-name">Свой сайт</div>
+          <div class="channel-badge cb-stub">Ожидает</div>
+        </div>
+        <div class="channel-desc">Собственный landing page</div>
         <button class="channel-btn" disabled>Настроить</button>
       </div>
     </div>
@@ -2017,8 +2073,8 @@ main {
         </div>
         <div style="display:flex;align-items:center;gap:12px;margin:6px 0">
           <label style="font-size:.75rem;color:var(--text-muted)">По умолчанию:</label>
-          <label style="font-size:.82rem;color:var(--text-secondary);cursor:pointer"><input type="radio" name="def-voice" value="female" checked> Женский</label>
-          <label style="font-size:.82rem;color:var(--text-secondary);cursor:pointer"><input type="radio" name="def-voice" value="male"> Мужской</label>
+          <label style="font-size:.82rem;color:var(--text-secondary);cursor:pointer"><input type="radio" name="def-voice" value="female"> Женский</label>
+          <label style="font-size:.82rem;color:var(--text-secondary);cursor:pointer"><input type="radio" name="def-voice" value="male" checked> Мужской</label>
         </div>
         <button class="card-btn primary" style="margin-top:8px" onclick="saveSettings()">Сохранить</button>
       </div>
@@ -2896,8 +2952,8 @@ function renderCard(t, btnLabel, btn1Label) { btn1Label = btn1Label || 'AI ан�
   const catEsc = (t.tags||[]).join(',').replace(/'/g, "\\'");
   const priceEsc = (t.price||'').replace(/'/g, "\\'");
   const imgHtml = t.image
-    ? `<img class="card-img" src="${t.image}" alt="${esc}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" loading="lazy"><div class="card-img-placeholder" style="display:none"></div>`
-    : '<div class="card-img-placeholder"></div>';
+    ? `<div class="card-img-wrap"><img src="${t.image}" alt="${esc}" onerror="this.parentElement.outerHTML='<div class=card-img-placeholder>нет фото</div>'" loading="lazy"></div>`
+    : '<div class="card-img-placeholder">нет фото</div>';
   return `
   <div class="product-card" onclick="openCard('${esc}')">
     ${imgHtml}
@@ -3896,8 +3952,8 @@ function renderProductCard(c) {
   const img = c.image_drive || c.image_url || (c.image_drive_id ? 'https://lh3.googleusercontent.com/d/' + c.image_drive_id : '');
   const esc = c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
   const imgHtml = img
-    ? `<img class="card-img" src="${img}" alt="${esc}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" loading="lazy"><div class="card-img-placeholder" style="display:none"></div>`
-    : '<div class="card-img-placeholder"></div>';
+    ? `<div class="card-img-wrap"><img src="${img}" alt="${esc}" onerror="this.parentElement.outerHTML='<div class=card-img-placeholder>нет фото</div>'" loading="lazy"></div>`
+    : '<div class="card-img-placeholder">нет фото</div>';
   const statusBadge = c.content_status === 'completed' ? '<span class="card-trend trend-up">Готов</span>'
     : c.content_status === 'processing' ? '<span class="card-trend trend-stable">В работе</span>'
     : '<span class="card-trend trend-down">Нет</span>';
