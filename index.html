@@ -586,28 +586,38 @@ main {
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); max-width: 100%;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  max-width: 100%;
   gap: clamp(8px, 1.5vw, 14px);
 }
 
-/* ── Product Card ── */
+/* ── Product Card — vertical 9:16 style ── */
 .product-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.4rem 1.3rem;
+  padding: 0;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   transition: all var(--transition);
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: .8rem;
+  overflow: hidden;
+  aspect-ratio: 9/14;
 }
 .product-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-accent);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+.card-body {
+  padding: .8rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  flex: 1;
 }
 .card-top {
   display: flex;
@@ -893,17 +903,18 @@ main {
   .logo sub { display: none; }
   .search-kbd { display: none; }
   .metrics { grid-template-columns: repeat(2, 1fr); }
-  .cards-grid { grid-template-columns: 1fr !important; }
+  .cards-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .product-card { aspect-ratio: 9/15; }
   .toast { left: 16px; right: 16px; bottom: 16px; }
 }
 
 @media (min-width: 1440px) {
-  .cards-grid { grid-template-columns: repeat(4, 1fr); }
+  .cards-grid { grid-template-columns: repeat(5, 1fr); }
 }
 
 @media (min-width: 1920px) {
   main { padding: 2rem 3rem; }
-  .cards-grid { grid-template-columns: repeat(4, 1fr); }
+  .cards-grid { grid-template-columns: repeat(6, 1fr); }
   .metrics { grid-template-columns: repeat(5, 1fr); }
 }
 
@@ -1005,8 +1016,10 @@ main {
 .detail-editor { width:100%; min-height:80px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 12px; color:var(--text-primary); font-family:var(--font-main); font-size:.85rem; resize:vertical; margin:.5rem 0; }
 
 /* Card image */
-.card-img { width:100%; height:160px; object-fit:cover; border-radius:var(--radius-sm); display:block; }
-.card-img-placeholder { width:100%; height:60px; border-radius:var(--radius-sm); background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:.8rem; color:var(--text-muted); border:1px dashed var(--border); }
+/* Card image — fills top of vertical card, 2:3 aspect */
+.card-img { width:100%; height:0; padding-bottom:133%; object-fit:cover; display:block; }
+.card-img-placeholder { width:100%; height:0; padding-bottom:100%; background:var(--bg-input); display:flex; align-items:center; justify-content:center; font-size:.8rem; color:var(--text-muted); border-bottom:1px dashed var(--border); position:relative; }
+.card-img-placeholder::after { content:'нет фото'; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
 
 /* Archive filters */
 .archive-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
@@ -1018,7 +1031,7 @@ main {
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
-  .cards-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .cards-grid { grid-template-columns: repeat(3, 1fr) !important; }
   .metrics { grid-template-columns: repeat(3, 1fr); }
   .nav-item { padding: 5px 11px; font-size: .75rem; }
 }
@@ -2883,28 +2896,28 @@ function renderCard(t, btnLabel, btn1Label) { btn1Label = btn1Label || 'AI ан�
   const catEsc = (t.tags||[]).join(',').replace(/'/g, "\\'");
   const priceEsc = (t.price||'').replace(/'/g, "\\'");
   const imgHtml = t.image
-    ? `<img class="card-img" src="${t.image}" alt="${esc}" onerror="this.outerHTML='<div class=\\'card-img-placeholder\\'>нет фото</div>'">`
-    : '<div class="card-img-placeholder" style="height:80px;display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--text-muted)">нет фото</div>';
-  const compHtml = t.competition ? `<span style="font-size:.7rem;color:var(--text-muted)">Конкуренция: ${t.competition}</span>` : '';
+    ? `<img class="card-img" src="${t.image}" alt="${esc}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" loading="lazy"><div class="card-img-placeholder" style="display:none"></div>`
+    : '<div class="card-img-placeholder"></div>';
   return `
   <div class="product-card" onclick="openCard('${esc}')">
     ${imgHtml}
-    <div class="card-top">
-      <div>
-        <div class="card-name">${t.name}</div>
-        <div class="card-source">Фаза: ${t.phase} · Маржа: ${t.margin}%</div>
+    <div class="card-body">
+      <div class="card-top">
+        <div>
+          <div class="card-name">${t.name}</div>
+          <div class="card-source">${t.phase} · ${t.margin}% маржа</div>
+        </div>
+        <div class="score-badge ${sc}">${t.score}</div>
       </div>
-      <div class="score-badge ${sc}">${t.score}</div>
-    </div>
-    <div class="progress-bar"><div class="progress-fill ${fc}" style="width:${t.score*10}%"></div></div>
-    <div class="card-meta">
-      <span class="card-price">${t.price}</span>
-      ${trendBadge(t.direction)}
-    </div>
-    <div class="card-tags">${t.tags.map(tg=>`<span class="tag">${tg}</span>`).join('')} ${compHtml}</div>
-    <div class="card-actions">
-      <button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">${btn1Label}</button>
-      <button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}','${catEsc}','${priceEsc}')">Создать кандидата</button>
+      <div class="progress-bar"><div class="progress-fill ${fc}" style="width:${t.score*10}%"></div></div>
+      <div class="card-meta">
+        <span class="card-price">${t.price}</span>
+        ${trendBadge(t.direction)}
+      </div>
+      <div class="card-actions" style="margin-top:auto">
+        <button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">${btn1Label}</button>
+        <button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}','${catEsc}','${priceEsc}')">Кандидат</button>
+      </div>
     </div>
   </div>`;
 }
@@ -3883,35 +3896,33 @@ function renderProductCard(c) {
   const img = c.image_drive || c.image_url || (c.image_drive_id ? 'https://lh3.googleusercontent.com/d/' + c.image_drive_id : '');
   const esc = c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
   const imgHtml = img
-    ? `<img class="card-img" src="${img}" alt="${esc}" onerror="this.outerHTML='<div class=card-img-placeholder>нет фото</div>'">`
-    : '<div class="card-img-placeholder">нет фото</div>';
-  const statusBadge = c.content_status === 'completed' ? '<span class="card-trend trend-up">Контент готов</span>'
+    ? `<img class="card-img" src="${img}" alt="${esc}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" loading="lazy"><div class="card-img-placeholder" style="display:none"></div>`
+    : '<div class="card-img-placeholder"></div>';
+  const statusBadge = c.content_status === 'completed' ? '<span class="card-trend trend-up">Готов</span>'
     : c.content_status === 'processing' ? '<span class="card-trend trend-stable">В работе</span>'
-    : '<span class="card-trend trend-down">Нет контента</span>';
-  const pubBadge = c.pub_status === 'published' ? ' · <span style="color:var(--accent-3)">Опубликован</span>' : '';
-  const supplierHtml = c.supplier_url
-    ? `<a href="${c.supplier_url}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:.72rem;color:var(--accent-2);text-decoration:none;display:flex;align-items:center;gap:4px">🔗 Поставщик</a>`
-    : '';
+    : '<span class="card-trend trend-down">Нет</span>';
+  const pubBadge = c.pub_status === 'published' ? '<span style="color:var(--accent-3);font-size:.7rem">Опубликован</span>' : '';
   return `
   <div class="product-card" onclick="openDetail('${c.id}')">
     ${imgHtml}
-    <div class="card-top">
-      <div>
-        <div class="card-name">${c.name}</div>
-        <div class="card-source">${c.price_pln} PLN · Маржа ${c.margin}%${pubBadge}</div>
+    <div class="card-body">
+      <div class="card-top">
+        <div>
+          <div class="card-name">${c.name}</div>
+          <div class="card-source">${c.price_pln} PLN · ${c.margin}%${pubBadge ? ' · '+pubBadge : ''}</div>
+        </div>
+        <div class="score-badge ${sc}">${c.score || '—'}</div>
       </div>
-      <div class="score-badge ${sc}">${c.score || '—'}</div>
-    </div>
-    <div class="progress-bar"><div class="progress-fill ${fc}" style="width:${(c.score||0)*10}%"></div></div>
-    <div class="card-meta">
-      <span class="card-price">$${c.price_usd} закупка</span>
-      ${statusBadge}
-    </div>
-    ${supplierHtml}
-    <div class="card-actions">
-      <button class="card-btn" onclick="event.stopPropagation();openMR('${c.id}')" title="Media Review Player">&#9654; Медиа</button>
-      <button class="card-btn" onclick="event.stopPropagation();openStudioModal('${c.id}')">Студия</button>
-      <button class="card-btn primary" onclick="event.stopPropagation();triggerAllContent('${c.id}','${esc}','')">Контент</button>
+      <div class="progress-bar"><div class="progress-fill ${fc}" style="width:${(c.score||0)*10}%"></div></div>
+      <div class="card-meta">
+        <span class="card-price">$${c.price_usd}</span>
+        ${statusBadge}
+      </div>
+      <div class="card-actions" style="margin-top:auto">
+        <button class="card-btn" onclick="event.stopPropagation();openMR('${c.id}')">&#9654;</button>
+        <button class="card-btn" onclick="event.stopPropagation();openStudioModal('${c.id}')">Студия</button>
+        <button class="card-btn primary" onclick="event.stopPropagation();triggerAllContent('${c.id}','${esc}','')">Контент</button>
+      </div>
     </div>
   </div>`;
 }
