@@ -2537,7 +2537,7 @@ async function loadFromSheets() {
       tags:        [r[2] || ''].filter(Boolean),
       phase:       velocityToPhase[r[9]] || 'peak',
       status:      r[15] || '',
-      image:       '' // no thumbnail column in Trends sheet
+      image:       r[25] || ''
     })).filter(t => t.score > 0);
     if (live.length > 0) {
       live.sort((a,b) => b.score - a.score);
