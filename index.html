@@ -3753,7 +3753,8 @@ async function runSearch() {
   document.querySelector('.search-btn').textContent = '...';
   try {
     const res = await fetch(CONFIG.webhookSearch, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({query: q, source: 'dashboard'}) });
-    const data = await res.json();
+    let data = await res.json();
+    if (Array.isArray(data)) data = data[0] || {};
     showSearchResult(q, data);
   } catch(e) {
     showToast('Анализ запущен — результат в Telegram', '📱');
@@ -3784,7 +3785,9 @@ async function loadFromSheets() {
       body: JSON.stringify({ action: 'load_all' })
     });
     if (!res.ok) return;
-    const data = await res.json();
+    let data = await res.json();
+    // n8n webhook returns array of 1 element — unwrap
+    if (Array.isArray(data)) data = data[0] || {};
 
     // Process trends
     const rows = data.trends || [];
@@ -4571,7 +4574,8 @@ async function loadWorkflowStatuses() {
       body: JSON.stringify({ action: 'wf_status' })
     });
     if (!res.ok) throw new Error('WF status fetch failed');
-    const data = await res.json();
+    let data = await res.json();
+    if (Array.isArray(data)) data = data[0] || {};
     const lastRuns = data.executions || {};
     let errorCount = 0;
     for (const wf of MOCK_WFS) {
