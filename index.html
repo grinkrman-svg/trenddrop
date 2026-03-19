@@ -3794,7 +3794,7 @@ async function loadFromSheets() {
       name: r[1]||'—', score: parseFloat(r[3])||0, price: (r[11]||'0')+' PLN',
       margin: Math.round(parseFloat(r[12])||0), direction: r[8]||'stable',
       competition: r[10]||'—', tags: [r[2]||''].filter(Boolean),
-      phase: velocityToPhase[r[9]]||'peak', status: r[15]||'', image: r[25]||''
+      phase: velocityToPhase[r[9]]||'peak', status: r[14]||'', image: r[18]||''
     })).filter(t => t.score > 0);
     if (live.length > 0) {
       live.sort((a,b) => b.score - a.score);
@@ -3808,23 +3808,32 @@ async function loadFromSheets() {
     // Process candidates
     const candRows = data.candidates || [];
     if (candRows.length) {
+      // New Candidates mapping (27 columns):
+      // 0=candidate_id, 1=trend_id, 2=keyword, 3=supplier_name, 4=supplier_url,
+      // 5=supplier_price_usd, 6=supplier_rating, 7=supplier_country, 8=supplier_delivery_days,
+      // 9=cost_total_pln, 10=sell_price_pln, 11=margin_pln, 12=margin_pct, 13=score,
+      // 14=content_status, 15=pub_status, 16=image_url, 17=image_drive_url,
+      // 18=video_drive_url, 19=audio_drive_url, 20=title_pl, 21=description_pl,
+      // 22=keywords, 23=shopify_url, 24=allegro_url, 25=created_at, 26=updated_at
       const liveCand = candRows.map(r => ({
-        id: r[0]||'', name: r[2]||'—', supplier_url: r[4]||'', price_usd: r[5]||'0',
-        price_pln: r[16]||'0', margin: Math.round(parseFloat(r[18])||0),
-        image_url: r[22]||'', image_drive_id: r[24]||'', image_drive: driveDirectUrl(r[25]||''),
-        video_drive: driveDirectUrl(r[28]||''), video_clips_count: parseInt(r[74])||0,
-        videos_all_urls: (()=>{try{return JSON.parse(r[76]||'[]')}catch(e){return[]}})(),
-        audio_url: driveDirectUrl(r[53]||''), pub_status: r[36]||'new',
-        content_status: r[54]||'', score: parseFloat(r[59])||0,
-        shopify_url: r[34]||'', allegro_url: r[32]||'', description: r[20]||'',
-        title_pl: r[19]||'', trend_id: r[1]||'',
-        photos_all_urls: (()=>{try{return JSON.parse(r[68]||'[]')}catch(e){return[]}})(),
-        photos_count: parseInt(r[69])||0, audio_drive_id: r[52]||'',
-        audios_all_urls: (()=>{try{return JSON.parse(r[80]||'[]')}catch(e){return[]}})(),
-        video_format: r[71]||'', video_duration: r[72]||'', video_style: r[73]||'',
-        content_title: r[19]||'', content_desc: r[20]||'', content_keywords: r[21]||'',
-        base_image_drive_url: driveDirectUrl(r[50]||''),
-        lifestyle_image_drive_url: driveDirectUrl(r[51]||'')
+        id: r[0]||'', trend_id: r[1]||'', name: r[2]||'—',
+        supplier_name: r[3]||'', supplier_url: r[4]||'', price_usd: r[5]||'0',
+        supplier_rating: r[6]||'', supplier_country: r[7]||'',
+        cost_total_pln: r[9]||'0', price_pln: r[10]||'0',
+        margin_pln: r[11]||'0', margin: Math.round(parseFloat(r[12])||0),
+        score: parseFloat(r[13])||0,
+        content_status: r[14]||'', pub_status: r[15]||'new',
+        image_url: r[16]||'', image_drive: driveDirectUrl(r[17]||''),
+        video_drive: driveDirectUrl(r[18]||''),
+        audio_url: driveDirectUrl(r[19]||''),
+        title_pl: r[20]||'', description: r[21]||'', keywords: r[22]||'',
+        shopify_url: r[23]||'', allegro_url: r[24]||'',
+        // Backwards-compat aliases
+        image_drive_id: '', video_clips_count: 0, videos_all_urls: [],
+        photos_all_urls: [], photos_count: 0, audio_drive_id: '',
+        audios_all_urls: [], video_format: '', video_duration: '', video_style: '',
+        content_title: r[20]||'', content_desc: r[21]||'', content_keywords: r[22]||'',
+        base_image_drive_url: '', lifestyle_image_drive_url: ''
       })).filter(c => c.name !== '—');
       if (liveCand.length > 0) {
         liveCand.sort((a,b) => b.score - a.score);
@@ -4168,8 +4177,8 @@ function initPnL() {
   let revenue = 0, cogs = 0;
   const published = CANDIDATES.filter(c => c.pub_status === 'published');
   published.forEach(c => {
-    const sell = parseFloat(c.price_pln) || 0;
-    const buy = (parseFloat(c.price_usd) || 0) * 4.2; // USD to PLN
+    const sell = parseFloat(c.price_pln) || parseFloat(c.cost_total_pln) * 2 || 0;
+    const buy = parseFloat(c.cost_total_pln) || (parseFloat(c.price_usd) || 0) * 4.2;
     revenue += sell;
     cogs += buy;
   });
@@ -4509,7 +4518,7 @@ async function loadSettings() {
     if(map.content_autorun_time)document.getElementById('set-time').value=map.content_autorun_time;
     if(map.elevenlabs_voice_female)document.getElementById('set-voice-f').value=map.elevenlabs_voice_female;
     if(map.elevenlabs_voice_male)document.getElementById('set-voice-m').value=map.elevenlabs_voice_male;
-    if(map.elevenlabs_voice_default)document.querySelector(`input[name="def-voice"][value="${map.elevenlabs_voice_default}"]`).checked=true;
+    if(map.elevenlabs_voice_default){const el=document.querySelector(`input[name="def-voice"][value="${map.elevenlabs_voice_default}"]`);if(el)el.checked=true;}
     if(map.min_score)document.getElementById('set-min-score').value=map.min_score;
   } catch(e) {}
 }
@@ -5664,7 +5673,7 @@ async function initDashboard() {
   loadWorkflowStatuses();
 
   // Auto-refresh every 60s
-  setInterval(() => { loadFromSheets(); }, 60000);
+  setInterval(() => { loadFromSheets(); loadWorkflowStatuses(); }, 60000);
 }
 
 document.addEventListener('DOMContentLoaded', initDashboard);

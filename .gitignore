@@ -1,0 +1,21 @@
+# API Keys - NEVER push to GitHub
+keys/
+API_KEYS.md
+Klucze.md
+
+# Archive - old files
+_archive/
+
+# Temp files
+tmp/
+*.tmp
+
+# Execution logs
+exec_*.json
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
