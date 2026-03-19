@@ -3797,7 +3797,7 @@ async function loadFromSheets() {
       name: r[1]||'—', score: parseFloat(r[3])||0, price: (r[11]||'0')+' PLN',
       margin: Math.round(parseFloat(r[12])||0), direction: r[8]||'stable',
       competition: r[10]||'—', tags: [r[2]||''].filter(Boolean),
-      phase: velocityToPhase[r[9]]||'peak', status: r[14]||'', image: r[18]||''
+      phase: velocityToPhase[r[9]]||'peak', status: r[15]||'', image: driveDirectUrl(r[25]||r[18]||'')
     })).filter(t => t.score > 0);
     if (live.length > 0) {
       live.sort((a,b) => b.score - a.score);
