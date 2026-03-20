@@ -2209,6 +2209,7 @@ main {
     </div>
     <div class="section-header">
       <div class="section-title">Горячие тренды</div>
+      <button class="section-action" onclick="clearDismissed()" style="background:none;border-color:var(--border);color:var(--text-secondary)">Показать все</button>
       <button class="section-action" onclick="refreshTrends()">Найти тренды</button>
     </div>
     <div class="filter-bar" id="trends-filter-bar">
@@ -3877,6 +3878,8 @@ async function loadFromSheets() {
       document.getElementById('m-trends').textContent = live.length;
       document.getElementById('m-trends-d').textContent = '+' + live.length + ' загружено';
       document.getElementById('nav-badge-trends').textContent = live.length;
+      // Clear dismissed if new data loaded (fresh trends)
+      localStorage.removeItem('td_dismissed');
       populateTrendCategories();
       filterTrends();
     }
