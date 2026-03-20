@@ -3195,7 +3195,8 @@ const CONFIG = {
   webhookAudio:    'https://gringoportal.app.n8n.cloud/webhook/wf3c-audio',
   webhookText:     'https://gringoportal.app.n8n.cloud/webhook/wf3d-text',
   webhookSpecs:    'https://gringoportal.app.n8n.cloud/webhook/wf3e-specs',
-  webhookPublish:  'https://gringoportal.app.n8n.cloud/webhook/wf4-publish'
+  webhookPublish:  'https://gringoportal.app.n8n.cloud/webhook/wf4-publish',
+  webhookDelete:   'https://gringoportal.app.n8n.cloud/webhook/dashboard-delete'
 };
 
 // ── GLOBAL STATE ──
@@ -3966,14 +3967,60 @@ function renderCards() {
   const visible = MOCK_TRENDS.filter(t => !dismissed.includes(t.name));
   document.getElementById('trends-grid').innerHTML = (visible.length ? visible.map(t => renderCard(t)).join('') : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)">Нет трендов</div>');
 }
-function dismissTrend(name) {
-  const dismissed = JSON.parse(localStorage.getItem('td_dismissed') || '[]');
-  if (!dismissed.includes(name)) dismissed.push(name);
-  localStorage.setItem('td_dismissed', JSON.stringify(dismissed));
-  filterTrends();
-  showToast('Убрано: ' + name.slice(0, 30), '×');
+async function dismissTrend(name) {
+  showToast('Удаление...', '\u23f3');
+  try {
+    const res = await fetch(CONFIG.webhookDelete, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'delete_trend', keyword: name })
+    });
+    let data = await res.json();
+    if (Array.isArray(data)) data = data[0];
+    if (data.success) {
+      MOCK_TRENDS = MOCK_TRENDS.filter(t => t.name !== name);
+      window.MOCK_TRENDS = MOCK_TRENDS;
+      filterTrends();
+      document.getElementById('m-trends').textContent = MOCK_TRENDS.length;
+      showToast('Удалено: ' + name.slice(0, 30), '\u2713');
+    } else {
+      showToast('Ошибка: ' + (data.error || 'unknown'), '\u2717');
+    }
+  } catch(e) {
+    const dismissed = JSON.parse(localStorage.getItem('td_dismissed') || '[]');
+    if (!dismissed.includes(name)) dismissed.push(name);
+    localStorage.setItem('td_dismissed', JSON.stringify(dismissed));
+    MOCK_TRENDS = MOCK_TRENDS.filter(t => t.name !== name);
+    filterTrends();
+    showToast('Убрано локально: ' + name.slice(0, 30), '\u00d7');
+  }
 }
-function clearDismissed() { localStorage.removeItem('td_dismissed'); filterTrends(); showToast('Все карточки восстановлены', '↻'); }
+function clearDismissed() { localStorage.removeItem('td_dismissed'); filterTrends(); showToast('Все карточки восстановлены', '\u21bb'); }
+
+async function deleteCandidate(id) {
+  if (!confirm('Удалить кандидата?')) return;
+  showToast('Удаление...', '\u23f3');
+  try {
+    const res = await fetch(CONFIG.webhookDelete, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ action: 'delete_candidate', candidate_id: id })
+    });
+    let data = await res.json();
+    if (Array.isArray(data)) data = data[0];
+    if (data.success) {
+      CANDIDATES = CANDIDATES.filter(c => c.id !== id);
+      window.CANDIDATES = CANDIDATES;
+      renderProductCards();
+      document.getElementById('m-products').textContent = CANDIDATES.length;
+      showToast('Кандидат удалён', '\u2713');
+    } else {
+      showToast('Ошибка: ' + (data.error || 'unknown'), '\u2717');
+    }
+  } catch(e) {
+    showToast('Ошибка удаления: ' + e.message, '\u2717');
+  }
+}
 
 function populateTrendCategories() {
   const cats = new Set();
@@ -4011,7 +4058,7 @@ function renderProductCard(c) {
   const img = c.image_drive || c.image_url;
   const imgHtml = img ? `<div class="card-img-wrap"><img src="${img}" alt="${c.name}" onerror="this.parentElement.outerHTML='<div class=card-img-placeholder>нет фото</div>'" loading="lazy"></div>` : '<div class="card-img-placeholder">нет фото</div>';
   const statusBadge = c.pub_status === 'published' ? '<span class="card-trend trend-up">опубликован</span>' : c.content_status === 'completed' ? '<span class="card-trend trend-stable">готов</span>' : c.content_status === 'processing' ? '<span class="card-trend" style="background:rgba(251,191,36,.1);color:#fbbf24">в работе</span>' : '<span class="card-trend" style="background:rgba(255,255,255,.06);color:var(--text-muted)">новый</span>';
-  return `<div class="product-card" onclick="openDetail('${c.id}')">${imgHtml}<div class="card-body"><div class="card-top"><div><div class="card-name">${c.name}</div><div class="card-source">${c.price_pln} PLN · ${c.margin}% маржа</div></div><div class="score-badge ${sc}">${c.score}</div></div><div class="progress-bar"><div class="progress-fill ${fc}" style="width:${c.score*10}%"></div></div><div class="card-meta"><span class="card-price">${c.price_usd} USD</span>${statusBadge}</div><div class="card-actions"><button class="card-btn" onclick="event.stopPropagation();openMR('${c.id}')">Медиа</button><button class="card-btn primary" onclick="event.stopPropagation();openStudioModal('${c.id}')">Создать</button></div></div></div>`;
+  return `<div class="product-card" style="position:relative" onclick="openDetail('${c.id}')"><button class="card-dismiss" onclick="event.stopPropagation();deleteCandidate('${c.id}')" title="Удалить">&times;</button>${imgHtml}<div class="card-body"><div class="card-top"><div><div class="card-name">${c.name}</div><div class="card-source">${c.price_pln} PLN · ${c.margin}% маржа</div></div><div class="score-badge ${sc}">${c.score}</div></div><div class="progress-bar"><div class="progress-fill ${fc}" style="width:${c.score*10}%"></div></div><div class="card-meta"><span class="card-price">${c.price_usd} USD</span>${statusBadge}</div><div class="card-actions"><button class="card-btn" onclick="event.stopPropagation();openMR('${c.id}')">Медиа</button><button class="card-btn primary" onclick="event.stopPropagation();openStudioModal('${c.id}')">Создать</button></div></div></div>`;
 }
 function renderProductCards() {
   const grid = document.getElementById('products-grid');
