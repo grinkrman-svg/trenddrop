@@ -3433,7 +3433,7 @@ const I18N = {
   },
   // Section titles (mapped by section id)
   sectionTitles: {
-    trends:      {ru:'Горячие тренды',pl:'Gorące trendy'},
+    trends:      {ru:'Горячие тренды',pl:'Popularne trendy'},
     products:    {ru:'Товары — кандидаты',pl:'Produkty — kandydaci'},
     kanban:      {ru:'Kanban — конвейер товаров',pl:'Kanban — pipeline produktów'},
     analytics:   {ru:'Аналитика и графики',pl:'Analityka i wykresy'},
@@ -3506,6 +3506,15 @@ const I18N = {
     no_trends:          {ru:'Нет трендов',pl:'Brak trendów'},
     no_products:        {ru:'Нет товаров',pl:'Brak produktów'},
     no_filter:          {ru:'Нет товаров по фильтру',pl:'Brak produktów wg filtra'},
+    no_trends_filter:   {ru:'Нет трендов по фильтру',pl:'Brak trendów wg filtra'},
+    all_prices:         {ru:'Все цены',pl:'Wszystkie ceny'},
+    all_categories:     {ru:'Все категории',pl:'Wszystkie kategorie'},
+    min_score:          {ru:'Мин. score',pl:'Min. score'},
+    all_directions:     {ru:'Все направления',pl:'Wszystkie kierunki'},
+    search_by_name:     {ru:'Поиск по названию...',pl:'Szukaj po nazwie...'},
+    btn_allegro:        {ru:'Allegro',pl:'Allegro'},
+    btn_ai_analysis:    {ru:'AI анализ',pl:'Analiza AI'},
+    btn_candidate:      {ru:'Кандидат',pl:'Kandydat'},
     no_photo:           {ru:'нет фото',pl:'brak zdjęcia'},
     margin:             {ru:'маржа',pl:'marża'},
     growing:            {ru:'↑ растёт',pl:'↑ rośnie'},
@@ -3703,6 +3712,21 @@ function applyTranslations(lang) {
   const filterStatus = document.getElementById('filter-status');
   if (filterStatus && filterStatus.options[0]) filterStatus.options[0].textContent = I18N.ui.all_statuses[lang];
 
+  // 14b. Trend filter selects
+  const tfPrice = document.getElementById('trend-filter-price');
+  if (tfPrice && tfPrice.options[0]) tfPrice.options[0].textContent = I18N.ui.all_prices[lang];
+  const tfCategory = document.getElementById('trend-filter-category');
+  if (tfCategory && tfCategory.options[0]) tfCategory.options[0].textContent = I18N.ui.all_categories[lang];
+  const tfScore = document.getElementById('trend-filter-score');
+  if (tfScore && tfScore.options[0]) tfScore.options[0].textContent = I18N.ui.min_score[lang];
+  const tfDirection = document.getElementById('trend-filter-direction');
+  if (tfDirection && tfDirection.options[0]) tfDirection.options[0].textContent = I18N.ui.all_directions[lang];
+  const tfName = document.getElementById('trend-filter-name');
+  if (tfName) tfName.placeholder = I18N.ui.search_by_name[lang];
+
+  // 14c. Re-render trend cards with translated buttons
+  if (MOCK_TRENDS && MOCK_TRENDS.length) filterTrends();
+
   // 15. Gamification labels
   const streakLabel = document.querySelector('.streak-label');
   if (streakLabel) streakLabel.textContent = I18N.ui.days_in_row[lang];
@@ -3853,8 +3877,8 @@ async function loadFromSheets() {
       document.getElementById('m-trends').textContent = live.length;
       document.getElementById('m-trends-d').textContent = '+' + live.length + ' загружено';
       document.getElementById('nav-badge-trends').textContent = live.length;
-      renderCards();
       populateTrendCategories();
+      filterTrends();
     }
 
     // Process candidates
@@ -3917,9 +3941,9 @@ async function loadCandidatesFromSheets() { return loadFromSheets(); }
 // ── RENDER FUNCTIONS ──
 function scoreClass(s) { if (s>=8) return 'score-hot fill-hot'; if (s>=6.5) return 'score-ok fill-ok'; return 'score-low fill-low'; }
 function trendBadge(d) {
-  if (d==='growing') return '<span class="card-trend trend-up">↑ растёт</span>';
-  if (d==='declining') return '<span class="card-trend trend-down">↓ падает</span>';
-  return '<span class="card-trend trend-stable">→ стабилен</span>';
+  if (d==='growing') return '<span class="card-trend trend-up">' + I18N.ui.growing[currentLang] + '</span>';
+  if (d==='declining') return '<span class="card-trend trend-down">' + I18N.ui.declining[currentLang] + '</span>';
+  return '<span class="card-trend trend-stable">' + I18N.ui.stable[currentLang] + '</span>';
 }
 function renderCard(t) {
   const [sc,fc] = scoreClass(t.score).split(' ');
@@ -3928,7 +3952,11 @@ function renderCard(t) {
   const priceEsc = (t.price||'').replace(/'/g,"\\'");
   const imgHtml = t.image ? `<div class="card-img-wrap"><img src="${t.image}" alt="${esc}" onerror="this.parentElement.outerHTML='<div class=card-img-placeholder>нет фото</div>'" loading="lazy"></div>` : '<div class="card-img-placeholder">нет фото</div>';
   const allegroUrl = 'https://allegro.pl/listing?string=' + encodeURIComponent(t.name);
-  return `<div class="product-card" style="position:relative" onclick="openCard('${esc}')"><button class="card-dismiss" onclick="event.stopPropagation();dismissTrend('${esc}')" title="Убрать">&times;</button>${imgHtml}<div class="card-body"><div class="card-top"><div><div class="card-name">${t.name}</div><div class="card-source">${t.phase} · ${t.margin}% маржа · ${t.competition}</div></div><div class="score-badge ${sc}">${t.score}</div></div><div class="progress-bar"><div class="progress-fill ${fc}" style="width:${t.score*10}%"></div></div><div class="card-meta"><span class="card-price">${t.price}</span>${trendBadge(t.direction)}</div><div class="card-actions"><a class="card-btn" href="${allegroUrl}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;text-align:center">Allegro</a><button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">AI анализ</button><button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}','${catEsc}','${priceEsc}')">Кандидат</button></div></div></div>`;
+  const btnAllegro = I18N.ui.btn_allegro[currentLang];
+  const btnAI = I18N.ui.btn_ai_analysis[currentLang];
+  const btnCand = I18N.ui.btn_candidate[currentLang];
+  const lblMargin = I18N.ui.margin[currentLang];
+  return `<div class="product-card" style="position:relative" onclick="openCard('${esc}')"><button class="card-dismiss" onclick="event.stopPropagation();dismissTrend('${esc}')" title="Убрать">&times;</button>${imgHtml}<div class="card-body"><div class="card-top"><div><div class="card-name">${t.name}</div><div class="card-source">${t.phase} · ${t.margin}% ${lblMargin} · ${t.competition}</div></div><div class="score-badge ${sc}">${t.score}</div></div><div class="progress-bar"><div class="progress-fill ${fc}" style="width:${t.score*10}%"></div></div><div class="card-meta"><span class="card-price">${t.price}</span>${trendBadge(t.direction)}</div><div class="card-actions"><a class="card-btn" href="${allegroUrl}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;text-align:center">${btnAllegro}</a><button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">${btnAI}</button><button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}','${catEsc}','${priceEsc}')">${btnCand}</button></div></div></div>`;
 }
 function renderCards() {
   const dismissed = JSON.parse(localStorage.getItem('td_dismissed') || '[]');
@@ -3939,25 +3967,25 @@ function dismissTrend(name) {
   const dismissed = JSON.parse(localStorage.getItem('td_dismissed') || '[]');
   if (!dismissed.includes(name)) dismissed.push(name);
   localStorage.setItem('td_dismissed', JSON.stringify(dismissed));
-  renderCards();
+  filterTrends();
   showToast('Убрано: ' + name.slice(0, 30), '×');
 }
-function clearDismissed() { localStorage.removeItem('td_dismissed'); renderCards(); showToast('Все карточки восстановлены', '↻'); }
+function clearDismissed() { localStorage.removeItem('td_dismissed'); filterTrends(); showToast('Все карточки восстановлены', '↻'); }
 
 function populateTrendCategories() {
   const cats = new Set();
-  MOCK_TRENDS.forEach(t => (t.tags||[]).forEach(tag => { if(tag) cats.add(tag); }));
+  MOCK_TRENDS.forEach(t => (t.tags||[]).forEach(tag => { if(tag && tag.trim()) cats.add(tag.trim()); }));
   const sel = document.getElementById('trend-filter-category');
   if (!sel) return;
   const val = sel.value;
-  sel.innerHTML = '<option value="">Все категории</option>';
+  sel.innerHTML = '<option value="">' + I18N.ui.all_categories[currentLang] + '</option>';
   [...cats].sort().forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
   sel.value = val;
 }
 
 function filterTrends() {
   const maxPrice = parseFloat(document.getElementById('trend-filter-price').value) || 0;
-  const category = document.getElementById('trend-filter-category').value;
+  const category = document.getElementById('trend-filter-category').value.trim();
   const minScore = parseFloat(document.getElementById('trend-filter-score').value) || 0;
   const direction = document.getElementById('trend-filter-direction').value;
   const nameQ = document.getElementById('trend-filter-name').value.toLowerCase();
@@ -3965,13 +3993,14 @@ function filterTrends() {
   const filtered = MOCK_TRENDS.filter(t => {
     if (dismissed.includes(t.name)) return false;
     if (maxPrice) { const p = parseFloat((t.price||'').replace(/[^\d.]/g,'')); if (p > maxPrice) return false; }
-    if (category && !(t.tags||[]).includes(category)) return false;
+    if (category && !(t.tags||[]).some(tag => tag.trim() === category)) return false;
     if (minScore && t.score < minScore) return false;
     if (direction && t.direction !== direction) return false;
     if (nameQ && !t.name.toLowerCase().includes(nameQ)) return false;
     return true;
   });
-  document.getElementById('trends-grid').innerHTML = filtered.length ? filtered.map(t => renderCard(t)).join('') : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)">Нет трендов по фильтру</div>';
+  const noMsg = I18N.ui.no_trends_filter[currentLang];
+  document.getElementById('trends-grid').innerHTML = filtered.length ? filtered.map(t => renderCard(t)).join('') : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)">' + noMsg + '</div>';
 }
 
 function renderProductCard(c) {
