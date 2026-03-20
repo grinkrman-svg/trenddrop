@@ -2196,6 +2196,35 @@ main {
       <div class="section-title">Горячие тренды</div>
       <button class="section-action" onclick="refreshTrends()">Найти тренды</button>
     </div>
+    <div class="filter-bar" id="trends-filter-bar">
+      <select id="trend-filter-price" onchange="filterTrends()">
+        <option value="">Все цены</option>
+        <option value="10">до 10 PLN</option>
+        <option value="20">до 20 PLN</option>
+        <option value="50">до 50 PLN</option>
+        <option value="100">до 100 PLN</option>
+        <option value="200">до 200 PLN</option>
+        <option value="500">до 500 PLN</option>
+        <option value="1000">до 1000 PLN</option>
+        <option value="2000">до 2000 PLN</option>
+      </select>
+      <select id="trend-filter-category" onchange="filterTrends()">
+        <option value="">Все категории</option>
+      </select>
+      <select id="trend-filter-score" onchange="filterTrends()">
+        <option value="">Мин. score</option>
+        <option value="5">5+</option>
+        <option value="6">6+</option>
+        <option value="7">7+</option>
+        <option value="8">8+</option>
+      </select>
+      <select id="trend-filter-direction" onchange="filterTrends()">
+        <option value="">Все направления</option>
+        <option value="growing">Growing</option>
+        <option value="stable">Stable</option>
+      </select>
+      <input type="text" id="trend-filter-name" placeholder="Поиск по названию..." oninput="filterTrends()" style="width:180px">
+    </div>
     <div class="cards-grid" id="trends-grid">
       <div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)">Загрузка трендов...</div>
     </div>
@@ -3233,6 +3262,10 @@ const EU_COUNTRIES = [
 // ── HELPERS ──
 function driveDirectUrl(url) {
   if (!url) return '';
+  // Skip non-URL values like "false", "true", "undefined", "null"
+  if (/^(false|true|undefined|null|0)$/i.test(url.trim())) return '';
+  // Regular HTTP(S) URLs that are NOT Google Drive — return as-is
+  if (/^https?:\/\//i.test(url) && !url.includes('drive.google.com') && !url.includes('lh3.googleusercontent.com')) return url;
   if (url.includes('lh3.googleusercontent.com')) return url;
   let id = '';
   const m1 = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -3797,7 +3830,7 @@ async function loadFromSheets() {
       name: r[1]||'—', score: parseFloat(r[3])||0, price: (r[11]||'0')+' PLN',
       margin: Math.round(parseFloat(r[12])||0), direction: r[8]||'stable',
       competition: r[10]||'—', tags: [r[2]||''].filter(Boolean),
-      phase: velocityToPhase[r[9]]||'peak', status: r[15]||'', image: driveDirectUrl(r[25]||r[18]||'')
+      phase: velocityToPhase[r[9]]||'peak', status: r[15]||'', image: driveDirectUrl(r[25]&&r[25]!=='false'?r[25] : r[18]&&r[18]!=='false'?r[18] : '')
     })).filter(t => t.score > 0);
     if (live.length > 0) {
       live.sort((a,b) => b.score - a.score);
@@ -3806,6 +3839,7 @@ async function loadFromSheets() {
       document.getElementById('m-trends-d').textContent = '+' + live.length + ' загружено';
       document.getElementById('nav-badge-trends').textContent = live.length;
       renderCards();
+      populateTrendCategories();
     }
 
     // Process candidates
@@ -3882,6 +3916,34 @@ function renderCard(t) {
   return `<div class="product-card" onclick="openCard('${esc}')">${imgHtml}<div class="card-body"><div class="card-top"><div><div class="card-name">${t.name}</div><div class="card-source">${t.phase} · ${t.margin}% маржа · ${t.competition}</div></div><div class="score-badge ${sc}">${t.score}</div></div><div class="progress-bar"><div class="progress-fill ${fc}" style="width:${t.score*10}%"></div></div><div class="card-meta"><span class="card-price">${t.price}</span>${trendBadge(t.direction)}</div><div class="card-actions"><a class="card-btn" href="${allegroUrl}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;text-align:center">Allegro</a><button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">AI анализ</button><button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}','${catEsc}','${priceEsc}')">Кандидат</button></div></div></div>`;
 }
 function renderCards() { document.getElementById('trends-grid').innerHTML = (MOCK_TRENDS.length ? MOCK_TRENDS.map(t => renderCard(t)).join('') : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)">Нет трендов</div>'); }
+
+function populateTrendCategories() {
+  const cats = new Set();
+  MOCK_TRENDS.forEach(t => (t.tags||[]).forEach(tag => { if(tag) cats.add(tag); }));
+  const sel = document.getElementById('trend-filter-category');
+  if (!sel) return;
+  const val = sel.value;
+  sel.innerHTML = '<option value="">Все категории</option>';
+  [...cats].sort().forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+  sel.value = val;
+}
+
+function filterTrends() {
+  const maxPrice = parseFloat(document.getElementById('trend-filter-price').value) || 0;
+  const category = document.getElementById('trend-filter-category').value;
+  const minScore = parseFloat(document.getElementById('trend-filter-score').value) || 0;
+  const direction = document.getElementById('trend-filter-direction').value;
+  const nameQ = document.getElementById('trend-filter-name').value.toLowerCase();
+  const filtered = MOCK_TRENDS.filter(t => {
+    if (maxPrice) { const p = parseFloat((t.price||'').replace(/[^\d.]/g,'')); if (p > maxPrice) return false; }
+    if (category && !(t.tags||[]).includes(category)) return false;
+    if (minScore && t.score < minScore) return false;
+    if (direction && t.direction !== direction) return false;
+    if (nameQ && !t.name.toLowerCase().includes(nameQ)) return false;
+    return true;
+  });
+  document.getElementById('trends-grid').innerHTML = filtered.length ? filtered.map(t => renderCard(t)).join('') : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)">Нет трендов по фильтру</div>';
+}
 
 function renderProductCard(c) {
   const [sc,fc] = scoreClass(c.score).split(' ');
@@ -4266,6 +4328,19 @@ async function triggerWF1() {
 }
 function triggerWF2(name, score, category, price) {
   callWebhook(CONFIG.webhookWF2, {keyword:name,score,category,price,source:'dashboard'}, 'WF-2 Supplier Finder', '🔎');
+  // Show enhanced toast with link to products
+  clearTimeout(toastTimer);
+  document.getElementById('toast-msg').innerHTML = 'Поиск поставщика запущен... <a href="#" onclick="showSection(\'products\',document.querySelector(\'[data-section=products]\'));return false;" style="color:#60a5fa;text-decoration:underline;margin-left:6px">Перейти к товарам</a>';
+  document.getElementById('toast-icon').textContent = '🔎';
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  toastTimer = setTimeout(() => t.classList.remove('show'), 35000);
+  // Auto-switch to products after 30 seconds
+  setTimeout(() => {
+    showSection('products', document.querySelector('[data-section="products"]'));
+    loadCandidatesFromSheets && loadCandidatesFromSheets();
+    showToast('Товары обновлены', '✓');
+  }, 30000);
 }
 function triggerPhoto(id,kw,ri) { callWebhook(CONFIG.webhookPhoto, getCandidatePayload(id,kw,ri), 'Photo', '📸'); }
 function triggerVideo(id,kw,ri) { callWebhook(CONFIG.webhookVideo, getCandidatePayload(id,kw,ri), 'Video', '🎬'); }
