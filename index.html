@@ -1376,7 +1376,7 @@ main {
 /* Products filter bar */
 .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
 .filter-bar select, .filter-bar input {
-  background: var(--bg-input);
+  background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
@@ -1384,6 +1384,21 @@ main {
   font-family: var(--font-main);
   font-size: .8rem;
 }
+.filter-bar select option {
+  background: var(--bg-solid);
+  color: var(--text-primary);
+  padding: 6px;
+}
+.filter-bar select:focus { border-color: var(--border-accent); outline: none; }
+.card-dismiss {
+  position: absolute; top: 6px; right: 6px; width: 24px; height: 24px;
+  border-radius: 50%; border: none; background: rgba(0,0,0,0.5);
+  color: #fff; font-size: 14px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; opacity: 0;
+  transition: opacity 0.2s; z-index: 2; line-height: 1;
+}
+.product-card:hover .card-dismiss { opacity: 1; }
+.card-dismiss:hover { background: var(--accent-danger); }
 /* ═══════════════════════════════════════════
    PHASE 2 — AI AUTOMATION + COMMERCE + SUPPLY CHAIN + STUDIO v2
 ═══════════════════════════════════════════ */
@@ -3913,9 +3928,21 @@ function renderCard(t) {
   const priceEsc = (t.price||'').replace(/'/g,"\\'");
   const imgHtml = t.image ? `<div class="card-img-wrap"><img src="${t.image}" alt="${esc}" onerror="this.parentElement.outerHTML='<div class=card-img-placeholder>нет фото</div>'" loading="lazy"></div>` : '<div class="card-img-placeholder">нет фото</div>';
   const allegroUrl = 'https://allegro.pl/listing?string=' + encodeURIComponent(t.name);
-  return `<div class="product-card" onclick="openCard('${esc}')">${imgHtml}<div class="card-body"><div class="card-top"><div><div class="card-name">${t.name}</div><div class="card-source">${t.phase} · ${t.margin}% маржа · ${t.competition}</div></div><div class="score-badge ${sc}">${t.score}</div></div><div class="progress-bar"><div class="progress-fill ${fc}" style="width:${t.score*10}%"></div></div><div class="card-meta"><span class="card-price">${t.price}</span>${trendBadge(t.direction)}</div><div class="card-actions"><a class="card-btn" href="${allegroUrl}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;text-align:center">Allegro</a><button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">AI анализ</button><button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}','${catEsc}','${priceEsc}')">Кандидат</button></div></div></div>`;
+  return `<div class="product-card" style="position:relative" onclick="openCard('${esc}')"><button class="card-dismiss" onclick="event.stopPropagation();dismissTrend('${esc}')" title="Убрать">&times;</button>${imgHtml}<div class="card-body"><div class="card-top"><div><div class="card-name">${t.name}</div><div class="card-source">${t.phase} · ${t.margin}% маржа · ${t.competition}</div></div><div class="score-badge ${sc}">${t.score}</div></div><div class="progress-bar"><div class="progress-fill ${fc}" style="width:${t.score*10}%"></div></div><div class="card-meta"><span class="card-price">${t.price}</span>${trendBadge(t.direction)}</div><div class="card-actions"><a class="card-btn" href="${allegroUrl}" target="_blank" onclick="event.stopPropagation()" style="text-decoration:none;text-align:center">Allegro</a><button class="card-btn" onclick="event.stopPropagation();searchThis('${esc}')">AI анализ</button><button class="card-btn primary" onclick="event.stopPropagation();triggerWF2('${esc}','${t.score}','${catEsc}','${priceEsc}')">Кандидат</button></div></div></div>`;
 }
-function renderCards() { document.getElementById('trends-grid').innerHTML = (MOCK_TRENDS.length ? MOCK_TRENDS.map(t => renderCard(t)).join('') : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)">Нет трендов</div>'); }
+function renderCards() {
+  const dismissed = JSON.parse(localStorage.getItem('td_dismissed') || '[]');
+  const visible = MOCK_TRENDS.filter(t => !dismissed.includes(t.name));
+  document.getElementById('trends-grid').innerHTML = (visible.length ? visible.map(t => renderCard(t)).join('') : '<div style="grid-column:1/-1;padding:2rem;text-align:center;color:var(--text-muted)">Нет трендов</div>');
+}
+function dismissTrend(name) {
+  const dismissed = JSON.parse(localStorage.getItem('td_dismissed') || '[]');
+  if (!dismissed.includes(name)) dismissed.push(name);
+  localStorage.setItem('td_dismissed', JSON.stringify(dismissed));
+  renderCards();
+  showToast('Убрано: ' + name.slice(0, 30), '×');
+}
+function clearDismissed() { localStorage.removeItem('td_dismissed'); renderCards(); showToast('Все карточки восстановлены', '↻'); }
 
 function populateTrendCategories() {
   const cats = new Set();
@@ -3934,7 +3961,9 @@ function filterTrends() {
   const minScore = parseFloat(document.getElementById('trend-filter-score').value) || 0;
   const direction = document.getElementById('trend-filter-direction').value;
   const nameQ = document.getElementById('trend-filter-name').value.toLowerCase();
+  const dismissed = JSON.parse(localStorage.getItem('td_dismissed') || '[]');
   const filtered = MOCK_TRENDS.filter(t => {
+    if (dismissed.includes(t.name)) return false;
     if (maxPrice) { const p = parseFloat((t.price||'').replace(/[^\d.]/g,'')); if (p > maxPrice) return false; }
     if (category && !(t.tags||[]).includes(category)) return false;
     if (minScore && t.score < minScore) return false;
