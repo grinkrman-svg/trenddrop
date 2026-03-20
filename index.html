@@ -3901,7 +3901,7 @@ async function loadFromSheets() {
         supplier_rating: r[6]||'', supplier_country: r[7]||'',
         cost_total_pln: r[9]||'0', price_pln: r[10]||'0',
         margin_pln: r[11]||'0', margin: Math.round(parseFloat(r[12])||0),
-        score: parseFloat(r[13])||0,
+        score: (s => s > 10 ? Math.round(s/10) : s)(parseFloat(r[13])||0),
         content_status: r[14]||'', pub_status: r[15]||'new',
         image_url: r[16]||'', image_drive: driveDirectUrl(r[17]||''),
         video_drive: driveDirectUrl(r[18]||''),
